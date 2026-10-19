@@ -1,4 +1,4 @@
-// ### AULA 4 (API) e AULA 9 (tela): busca por termo, JOIN e ordenação
+// ### Busca por termo, JOIN e ordenação (API e tela)
 //
 // Critérios que esta documentação ajuda a cumprir:
 //   5.2 Busca com no mínimo um termo (peso 3)
@@ -8,8 +8,8 @@
 // OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
 //
-// As rotas abaixo já aparecem com { preHandler: autenticar }. Se você ainda não fez a Aula 5
-// (função autenticar), deixe essa parte de fora por enquanto e acrescente depois.
+// As rotas abaixo já aparecem com { preHandler: autenticar }. Se você ainda não criou a função autenticar
+// (#1_criptografia_back.txt), deixe essa parte de fora por enquanto e acrescente depois.
 
 
 // ### PARTE 1: Busca por termo
@@ -17,7 +17,7 @@
 A busca tem 3 pedaços que se encaixam:
 1. No SQL: filtrar com ILIKE e % (qualquer texto antes ou depois).
 2. Na API: receber o termo pela URL (?busca=termo) com request.query.
-3. Na tela: um formulário em que o usuário digita o termo, confirma e a tabela atualiza (Aula 9).
+3. Na tela: um formulário em que o usuário digita o termo, confirma e a tabela atualiza.
 
 // ### SQL primeiro (teste no pgAdmin antes de programar)
 
@@ -69,7 +69,7 @@ GET http://localhost:6767/barbeiros?busca=zzz
 Authorization: Bearer {{token}}
 
 
-// ### Tela: o formulário de busca (Aula 9)
+// ### Tela: o formulário de busca
 
 O código do formulário e das funções buscar() e limparBusca() está em #3_crudFront.txt.
 Resumo do caminho: o botão Buscar chama buscar(event) > carregar(termo) > api('/barbeiros?busca=termo')

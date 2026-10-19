@@ -1,6 +1,6 @@
-// ### AULAS 6 e 7: Começando o front-end (CORS + fetch), tela de login, sessão e tela principal
+// ### Começando o front-end: CORS, fetch, tela de login, sessão e tela principal
 //
-// Critérios que esta documentação ajuda a cumprir:
+// Critérios da lista de verificação que esta documentação ajuda a cumprir:
 //   3.1 Login redireciona para a tela principal (peso 1)
 //   3.2 Sessão do usuário autenticado com tempo de expiração (peso 3)
 //   3.3 Validação em caso de falha no login (peso 2)
@@ -8,15 +8,35 @@
 //   4.2 Meio para sair do sistema (peso 1)
 //   4.3 Acesso a Barbeiro, Cliente e Agendamento a partir da principal (peso 1)
 //
-// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
-// Não copie essas linhas, copie só o que está entre elas.
+// Pré-requisito: a API pronta, com a rota POST /login (arquivo #1_criptografia_back.txt).
+//
+// Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código, nada do que você
+// já fez precisa ser apagado. As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa
+// e termina. Não copie essas linhas, copie só o que está entre elas.
 
 
-// ### Como o front conversa com a API
+// ### Passo 1: como o front conversa com a API
 
 O front (páginas HTML) roda no navegador. A API (server.js) roda no Node, na porta 6767.
-Como são "endereços" diferentes, o navegador bloqueia por segurança. Esse bloqueio se chama CORS.
-Para liberar, a API precisa dizer ao navegador que aceita as chamadas.
+Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no buscar() da pokedex:
+
+    const resposta = await fetch('http://localhost:6767/login', {
+        method: 'POST',                                   // GET, POST, PUT ou DELETE
+        body: JSON.stringify({ email, senha }),           // o que vai para a API
+        headers: { 'Content-Type': 'application/json' }   // avisa que o corpo é JSON
+    })
+    const dados = await resposta.json()                   // lê a resposta da API
+
+- resposta.ok é true quando o status é 200 a 299. Em 400 e 401 é false.
+- await só funciona dentro de uma função async.
+- GET e DELETE não têm body.
+
+
+// ### Passo 2: liberar o CORS na API
+
+Como o front e a API são "endereços" diferentes, o navegador bloqueia a conversa por segurança.
+Esse bloqueio se chama CORS. Para liberar, a API diz ao navegador que aceita as chamadas.
+No server.js, logo abaixo do const servidor = Fastify(), registre o cors:
 
 // >>> server.js
 servidor.register(cors, {
@@ -29,61 +49,43 @@ servidor.register(cors, {
 // Se você esquecer de listar PUT e DELETE em methods, o editar e o excluir falham no navegador
 // (mas funcionam no REST Client, o que confunde). Liste todos os métodos que usa.
 //
-// Sintoma do CORS faltando: no console do navegador (F12) aparece
-// "blocked by CORS policy" ou "Failed to fetch". O servidor reiniciou depois de salvar? (npm start usa --watch)
+// Sintoma do CORS faltando: no console do navegador (F12) aparece "blocked by CORS policy"
+// ou "Failed to fetch". Depois de salvar o server.js a API reinicia sozinha (npm start usa --watch).
 
 
-// ### fetch: o jeito do navegador de chamar a API
-
-const resposta = await fetch('http://localhost:6767/login', {
-    method: 'POST',                                      // GET, POST, PUT ou DELETE
-    headers: { 'Content-Type': 'application/json' },     // avisa que o corpo é JSON
-    body: JSON.stringify({ email, senha })               // transforma o objeto em texto JSON
-})
-const dados = await resposta.json()                      // lê a resposta da API
-// resposta.ok é true quando o status é 200 a 299. Em 400 e 401 é false.
-
-- await só funciona dentro de uma função async.
-- GET e DELETE não têm body.
-- Para rotas protegidas, o header Authorization: Bearer <token> vai junto (ver scripts.js abaixo).
-
-
-// ### Como abrir o front
+// ### Passo 3: abrir o front
 
 1. Rode a API: npm start (o terminal mostra "API da barbearia rodando em http://localhost:6767").
 2. Abra a pasta FRONT no VS Code, clique com o botão direito no index.html e escolha "Open with Live Server".
    (Dar dois cliques no arquivo também funciona, mas o Live Server recarrega sozinho quando você salva.)
-3. Para ver erros do JavaScript: F12 > aba Console. Para ver as chamadas: F12 > aba Network.
+3. Para ver erros do JavaScript: F12 > aba Console. Para ver as chamadas à API: F12 > aba Network.
+
+Páginas do front desta prova (pasta FRONT):
+
+    index.html         login
+    principal.html     tela principal
+    barbeiros.html     tela de barbeiro
+    clientes.html      tela de cliente
+    agendamentos.html  tela de agendamentos
+    scripts.js         funções usadas por TODAS as páginas (próximo passo)
+    styles.css         aparência (não vale ponto, é só para ficar apresentável)
 
 
-// ### Estrutura da pasta FRONT
+// ### Passo 4: scripts.js (as funções que todas as páginas usam)
 
-    FRONT/
-    ├── index.html         login
-    ├── principal.html     tela principal
-    ├── barbeiros.html     (aulas 8 e 9)
-    ├── clientes.html      (aula 10)
-    ├── agendamentos.html  (aula 11)
-    ├── scripts.js         funções usadas por TODAS as páginas
-    └── styles.css         aparência (não vale ponto, é só para ficar apresentável)
+Como vamos ter várias páginas, as funções de sessão ficam num arquivo só e cada página inclui com
+<script src="scripts.js"></script>. Assim você escreve uma vez e usa em todas.
 
-Cada página inclui o scripts.js com <script src="scripts.js"></script>.
-Assim as funções de sessão são escritas uma vez só.
-
-
-// ### O que é o localStorage
-
-É uma "gaveta" do navegador que guarda texto mesmo se você recarregar a página.
+Antes, o que é o localStorage: uma "gaveta" do navegador que guarda texto mesmo se você recarregar a página.
 - localStorage.setItem('chave', valor)    guarda
 - localStorage.getItem('chave')           lê (ou null se não existe)
 - localStorage.removeItem('chave')        apaga
-- JSON.stringify(objeto) e JSON.parse(texto): transformam objeto em texto e texto em objeto
+- JSON.stringify(objeto) e JSON.parse(texto) transformam objeto em texto e texto em objeto
   (o localStorage só guarda texto).
 
 Depois do login guardamos 3 coisas: token, expira (quando vence) e usuario (com o nome).
 
-
-// ### FRONT/scripts.js (funções de sessão, usadas em todas as páginas)
+Crie o arquivo FRONT/scripts.js:
 
 // >>> FRONT/scripts.js
 const API = 'http://localhost:6767'
@@ -144,42 +146,47 @@ function formatarData(data) {
 }
 // <<<
 
-// Resumo do que cada função faz:
+// O que cada função faz:
 //   sessaoValida()   -> critério 3.2: a sessão acaba quando o horário "expira" passa
-//   sair()           -> critério 4.2: apaga os dados e volta ao login
-//   protegerPagina() -> impede abrir principal.html, barbeiros.html... sem estar logado
-//   api()            -> chama a API mandando o token. Se vier 401 (token vencido), faz sair()
+//   sair()           -> critério 4.2: apaga os dados da sessão e volta ao login
+//   protegerPagina() -> impede abrir as telas sem estar logado
+//   api()            -> é o fetch que você já conhece, só que já manda o token no header Authorization
+//                       (as rotas protegidas da API exigem) e, se a API responder 401 (token vencido), faz sair()
+//   formatarData()   -> mostra a data em português (usada na tela de agendamentos)
 
 
-// ### AULA 6: FRONT/index.html (tela de login)
+// ### Passo 5: tela de login (FRONT/index.html)
 
-Critério 3.3: validação em caso de falha. Fazemos duas:
+Critério 3.3 (validação em caso de falha): fazemos duas.
 - no front: campos vazios;
-- vinda do back: a mensagem da API (401 "Usuário ou senha inválidos!") aparece na tela.
-Critério 3.1: se der certo, guarda a sessão e vai para principal.html.
+- vinda do back: a mensagem da API ("Usuário ou senha inválidos!") aparece na tela.
+Critério 3.1: se der certo, guarda a sessão e vai para a principal.
+
+Primeiro a parte visual. Salve e veja no navegador (os botões ainda não fazem nada):
 
 // >>> FRONT/index.html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barbearia - Login</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <main>
-        <h1>Barbearia - Login</h1>
+    <h1>Barbearia - Login</h1>
 
-        <form id="formLogin" onsubmit="fazerLogin(event)">
-            <input type="email" id="email" placeholder="E-mail"><br>
-            <input type="password" id="senha" placeholder="Senha"><br>
-            <button type="submit">Entrar</button>
-            <!-- Mensagem de falha na autenticação aparece aqui -->
-            <p id="mensagem" class="erro"></p>
-        </form>
-    </main>
+    <input type="email" placeholder="e-mail" id="email">
+    <input type="password" placeholder="senha" id="senha">
 
+    <button onclick="entrar()">entrar</button>
+
+    <!-- Mensagem de falha na autenticação aparece aqui -->
+    <p id="mensagem" class="erro"></p>
+// <<<
+
+Agora a parte que faz funcionar, logo abaixo (fecha o arquivo):
+
+// >>> FRONT/index.html
     <script src="scripts.js"></script>
     <script>
         // Se já estiver logado e a sessão não expirou, vai direto para a principal
@@ -187,14 +194,12 @@ Critério 3.1: se der certo, guarda a sessão e vai para principal.html.
             window.location.href = 'principal.html'
         }
 
-        async function fazerLogin(event) {
-            event.preventDefault()
-
+        async function entrar() {
             const email = document.getElementById('email').value
             const senha = document.getElementById('senha').value
             const mensagem = document.getElementById('mensagem')
 
-            // Validação no frontend
+            // Validação no front: campos vazios
             if (!email || !senha) {
                 mensagem.textContent = 'Preencha e-mail e senha!'
                 return
@@ -202,13 +207,14 @@ Critério 3.1: se der certo, guarda a sessão e vai para principal.html.
 
             const resposta = await fetch(`${API}/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, senha })
+                body: JSON.stringify({ email, senha }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
-
             const dados = await resposta.json()
 
-            // Validação vinda do backend (usuário ou senha inválidos)
+            // Validação vinda do back: usuário ou senha inválidos
             if (!resposta.ok) {
                 mensagem.textContent = dados.message
                 return
@@ -226,16 +232,18 @@ Critério 3.1: se der certo, guarda a sessão e vai para principal.html.
 // <<<
 
 // Pontos para entender:
-// - onsubmit="fazerLogin(event)": a função roda quando o formulário é enviado (botão ou tecla Enter).
-// - event.preventDefault(): impede o formulário de recarregar a página.
-// - O login NÃO usa a função api(), porque ainda não existe token.
-// - window.location.href = 'principal.html': é isso que "redireciona" (critério 3.1).
+// - O login não usa a função api(), porque ainda não existe token. Ele usa o fetch direto.
+// - ${API} vem do scripts.js, que foi carregado na linha de cima.
+// - window.location.href = 'principal.html' é o que "redireciona" (critério 3.1).
+// - Teste: campos vazios, senha errada (a mensagem da API aparece em vermelho) e senha certa.
+//   No F12 > Application > Local Storage você vê token, expira e usuario guardados.
+// - A principal.html ainda não existe: depois do login certo a página some. Siga para o passo 6.
 
 
-// ### AULA 7: FRONT/principal.html (nome do usuário, menu e sair)
+// ### Passo 6: tela principal (FRONT/principal.html)
 
 Critérios 4.1, 4.2 e 4.3:
-- mostrar o nome de quem está logado (vem do localStorage, salvo no login);
+- mostrar o nome de quem está logado (vem do localStorage, guardado no login);
 - botão Sair que apaga a sessão;
 - links para Barbeiros, Clientes e Agendamentos.
 E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a sessão venceu.
@@ -245,7 +253,6 @@ E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a se
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barbearia - Principal</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -256,16 +263,14 @@ E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a se
         <button onclick="sair()">Sair</button>
     </header>
 
-    <main>
-        <h1>Bem-vindo, <span id="boasVindas"></span>!</h1>
+    <h1>Bem-vindo, <span id="boasVindas"></span>!</h1>
 
-        <!-- Acesso às demais funcionalidades -->
-        <nav class="menu">
-            <a href="barbeiros.html">Barbeiros</a>
-            <a href="clientes.html">Clientes</a>
-            <a href="agendamentos.html">Agendamentos</a>
-        </nav>
-    </main>
+    <!-- Acesso às demais funcionalidades -->
+    <nav class="menu">
+        <a href="barbeiros.html">Barbeiros</a>
+        <a href="clientes.html">Clientes</a>
+        <a href="agendamentos.html">Agendamentos</a>
+    </nav>
 
     <script src="scripts.js"></script>
     <script>
@@ -279,17 +284,42 @@ E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a se
 </html>
 // <<<
 
-// As páginas barbeiros.html, clientes.html e agendamentos.html ainda não existem.
-// Crie cada uma com pelo menos o cabeçalho de navegação e protegerPagina() (veja #3_crudFront.txt),
-// senão os links da principal levam a "página não encontrada".
+// As páginas barbeiros.html, clientes.html e agendamentos.html ainda não existem. Enquanto isso,
+// crie cada uma com este modelo mínimo (troque o título), senão os links levam a "página não encontrada":
+//
+//     <!DOCTYPE html>
+//     <html lang="pt-BR">
+//     <head>
+//         <meta charset="UTF-8">
+//         <title>Barbearia - Clientes</title>
+//         <link rel="stylesheet" href="styles.css">
+//     </head>
+//     <body>
+//         <h1>Clientes</h1>
+//         <script src="scripts.js"></script>
+//         <script>protegerPagina()</script>
+//     </body>
+//     </html>
 
 
-// ### FRONT/styles.css (opcional, só aparência)
+// ### Passo 7: ver a sessão expirando (critério 3.2 funcionando)
+
+1. No server.js troque expiresIn: '30m' por '1m'.
+2. Faça login pelo front e entre na principal.
+3. Espere 1 minuto e recarregue a principal.
+4. A tela volta para o login com a mensagem "Sessão expirada...".
+5. Volte para '30m'.
+
+
+// ### Passo 8: styles.css (opcional, só aparência)
+
+Crie o arquivo FRONT/styles.css:
 
 // >>> FRONT/styles.css
 body {
     font-family: Arial, sans-serif;
     margin: 0;
+    padding: 0 24px 24px;
     background: #f4f1ec;
     color: #222;
 }
@@ -298,6 +328,7 @@ header {
     background: #1f1f1f;
     color: #fff;
     padding: 12px 24px;
+    margin: 0 -24px 16px;
     display: flex;
     gap: 16px;
     align-items: center;
@@ -312,19 +343,6 @@ header button {
     margin-left: auto;
 }
 
-main {
-    max-width: 960px;
-    margin: 24px auto;
-    padding: 0 16px;
-}
-
-form, .caixa {
-    background: #fff;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-}
-
 input, select, button {
     padding: 8px;
     margin: 4px 0;
@@ -335,21 +353,13 @@ button {
     cursor: pointer;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.item {
     background: #fff;
-}
-
-th, td {
     border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-
-th {
-    background: #333;
-    color: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    line-height: 1.7;
 }
 
 .erro {
@@ -362,7 +372,7 @@ th {
     background: #1f1f1f;
     color: #f0c27b;
     padding: 24px 32px;
-    margin: 8px;
+    margin: 8px 8px 8px 0;
     border-radius: 8px;
     text-decoration: none;
     font-size: 18px;
@@ -370,13 +380,14 @@ th {
 // <<<
 
 
-// ### Como mostrar a sessão expirando (para ver o critério 3.2 funcionando)
+// ### Revisão pela lista de verificação
 
-1. No server.js troque expiresIn: '30m' por '1m'.
-2. Faça login pelo front e entre na principal.
-3. Espere 1 minuto e clique em Barbeiros (ou recarregue a principal).
-4. A tela deve voltar para o login com a mensagem "Sessão expirada...".
-5. Volte para '30m'.
+[ ] 3.1 login com e-mail e senha do banco leva para a principal (peso 1)
+[ ] 3.2 a sessão tem prazo: depois do tempo, a tela volta ao login (peso 3)
+[ ] 3.3 campos vazios e senha errada mostram mensagem na tela (peso 2)
+[ ] 4.1 a principal mostra o nome de quem está logado (peso 2)
+[ ] 4.2 o botão Sair desloga e volta ao login (peso 1)
+[ ] 4.3 a principal tem links para Barbeiros, Clientes e Agendamentos (peso 1)
 
 
 // ### Erros comuns
@@ -384,7 +395,8 @@ th {
 - A tela de login não faz nada: abra o F12 > Console. Provavelmente tem um erro de JavaScript ou o scripts.js não carregou
   (confira o nome do arquivo no <script src="scripts.js">).
 - "Failed to fetch": a API não está rodando, a porta está errada no scripts.js (const API) ou faltou o CORS.
-- Mensagem de erro não aparece: o <p id="mensagem"> precisa existir no HTML com esse mesmo id.
+- A mensagem de erro não aparece: o <p id="mensagem"> precisa existir no HTML com esse mesmo id.
 - Voltou para o login logo depois de entrar: o localStorage não guardou o expira (confira a resposta do /login no Network).
 - "Cannot read properties of null (reading 'nome')": pegarUsuario() devolveu null, ou seja, não há usuário salvo.
   Chame protegerPagina() ANTES de usar pegarUsuario().
+- Enter não envia o login: de propósito, o envio é pelo botão entrar (onclick), como na pokedex.

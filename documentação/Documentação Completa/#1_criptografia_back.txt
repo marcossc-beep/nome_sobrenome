@@ -1,4 +1,4 @@
-// ### AULA 5: Criptografia no back-end (bcrypt + JWT) e rota de login
+// ### Criptografia no back-end (bcrypt + JWT) e rota de login
 //
 // Critérios que esta documentação ajuda a cumprir:
 //   3.1 Autenticação com login e senha do banco (peso 1)
@@ -71,7 +71,7 @@ servidor.register(jwt, {
 // <<<
 
 // expiresIn: '30m' = o token vale 30 minutos. Depois disso a API responde 401.
-// Para testar a expiração em aula, troque para '1m', faça login, espere 1 minuto e chame uma rota protegida.
+// Para testar a expiração, troque para '1m', faça login, espere 1 minuto e chame uma rota protegida.
 // Volte para '30m' depois.
 
 // A conexão com o banco (Pool) é a mesma da Documentação Simplificada, API.txt.
@@ -97,7 +97,7 @@ async function autenticar(request, reply) {
 //
 //     servidor.get('/barbeiros', { preHandler: autenticar }, async (request, reply) => { ... })
 //
-// Depois desta aula, volte nas rotas que você já criou (barbeiro, cliente, agendamento)
+// Depois de criar a função autenticar, volte nas rotas que você já criou (barbeiro, cliente, agendamento)
 // e acrescente { preHandler: autenticar } em todas elas. A rota /login NÃO leva preHandler.
 
 
@@ -149,7 +149,7 @@ servidor.post('/login', async (request, reply) => {
 
 // ### Passo 4: criptografar CPF e senha do barbeiro (critério 5.4)
 
-Volte nas rotas de barbeiro que você criou na Aula 3. Agora o POST e o PUT usam bcrypt.hash.
+Volte nas rotas de barbeiro que você já criou (o CRUD básico). Agora o POST e o PUT usam bcrypt.hash.
 Atenção no PUT: CPF e senha só são trocados se vierem preenchidos, porque na tela de edição
 o usuário não vê o valor antigo (ele está em hash).
 
@@ -218,7 +218,7 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
 // A listagem GET /barbeiros (com busca) está no arquivo #4_filtros_e_JOIN.txt.
 
 
-// ### Passo 5: os dados que você inseriu na Aula 2 precisam virar hash
+// ### Passo 5: os dados que você inseriu no banco precisam virar hash
 
 O login compara com bcrypt.compare. Se a senha do usuario no banco está em texto puro ("123"),
 o login SEMPRE falha. Troque pelos hashes. O jeito mais simples é no próprio SQL,

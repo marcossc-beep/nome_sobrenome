@@ -1,4 +1,4 @@
-// ### AULA 1: Lendo a prova, preenchendo o Anexo 1 e organizando as entregas
+// ### Lendo a prova, preenchendo o Anexo 1 e organizando as entregas
 //
 // Critérios que esta documentação ajuda a cumprir:
 //   1.1 Identificou no mínimo 4 requisitos do sistema conforme Anexo 1 (peso 2)

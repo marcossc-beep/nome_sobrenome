@@ -1,52 +1,56 @@
-// ### AULAS 8 e 9: CRUD no front-end (tela de Barbeiro)
+// ### CRUD no front-end: tela de Barbeiro (listar, cadastrar, excluir, buscar e editar)
 //
-// Critérios que esta documentação ajuda a cumprir (na tela):
-//   5.1 Listar e excluir barbeiros (peso 2)           <- Aula 8
-//   5.3 Cadastrar um novo barbeiro (peso 2)           <- Aula 8
-//   5.4 CPF e senha criptografados, visto pela tela   <- Aula 8
-//   5.2 Busca por termo (peso 3)                      <- Aula 9
-//   5.5 Editar um barbeiro existente (peso 3)         <- Aula 9
+// Critérios da lista de verificação que esta documentação ajuda a cumprir:
+//   5.1 Listar e excluir barbeiros cadastrados (peso 2)
+//   5.2 Busca com no mínimo um termo (peso 3)
+//   5.3 Cadastrar um novo barbeiro, gravando no banco (peso 2)
+//   5.4 CPF e senha criptografados (peso 3): quem criptografa é a API, aqui você confere o resultado
+//   5.5 Editar um barbeiro já existente (peso 3)
 //
-// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
+// Pré-requisitos: a API com as rotas de barbeiro, o scripts.js e a sessão prontos (#2_fetch_cors_login.txt).
+//
+// Como usar este arquivo: siga os passos NA ORDEM. Cada passo só ACRESCENTA código ao arquivo
+// FRONT/barbeiros.html, nada do que você já fez precisa ser apagado.
+// As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
-// Pré-requisito: scripts.js e a sessão prontos (#2_fetch_cors_login.txt) e as rotas de barbeiro na API.
 
 
-// ### O CRUD na tela: o que cada letra vira
+// ### Antes de começar: o CRUD na tela
 
-C - Create  = cadastrar  -> formulário + fetch POST
-R - Read    = listar     -> fetch GET + montar a tabela na tela
-U - Update  = editar     -> botão Editar preenche o formulário + fetch PUT
-D - Delete  = excluir    -> botão Excluir + fetch DELETE
+É o mesmo formato da pokedex: inputs com id, botões com onclick, uma div com id="lista" e fetch.
 
-Depois de CADA ação (cadastrar, editar, excluir) chamamos carregar() de novo para a tabela mostrar o que mudou.
+C - Create  = cadastrar  -> inputs + botão + fetch POST
+R - Read    = listar     -> fetch GET + forEach montando a lista na tela
+U - Update  = editar     -> botão editar preenche os inputs + fetch PUT
+D - Delete  = excluir    -> botão excluir + fetch DELETE
 
+Depois de CADA ação (cadastrar, editar, excluir) chamamos carregar() de novo, para a lista mostrar o que mudou.
 
-// ### Ferramentas do DOM (como o JavaScript mexe na página)
-
-document.getElementById('lista')   pega o elemento que tem id="lista"
-.value                             lê (ou escreve) o que está dentro de um input
-.textContent                       escreve texto simples em um elemento
-.innerHTML                         escreve HTML dentro de um elemento (usado para montar as linhas da tabela)
-array.forEach(item => { ... })     repete um bloco para cada item do array que veio da API
-array.find(item => condição)       acha o primeiro item que combina (usado no Editar)
-`texto ${variavel} texto`          template literal: crase + ${} coloca variável no meio do texto
+Ferramentas que vamos usar:
+  document.getElementById('lista')   pega o elemento que tem id="lista"
+  .value                             lê (ou escreve) o que está dentro de um input
+  .textContent                       escreve texto simples em um elemento
+  .innerHTML                         escreve HTML dentro de um elemento (usado para montar a lista)
+  array.forEach((item) => { ... })   repete um bloco para cada item do array que veio da API
+  array.find((item) => condição)     acha o primeiro item que combina (usado no editar)
+  `texto ${variavel}`                template literal: entre crases, ${} coloca uma variável no texto
 
 Regra de ouro da lista: LIMPE antes (lista.innerHTML = '') e depois SOME com += dentro do forEach.
 Se não limpar, cada recarga repete tudo.
 
+Diferença para a pokedex: aqui usamos a função api() do scripts.js no lugar do fetch.
+Ela é o mesmo fetch, só que já manda o token e trata a sessão vencida.
 
-// ### FRONT/barbeiros.html: a estrutura (HTML)
 
-Um formulário só serve para cadastrar E para editar. O input escondido (type="hidden" id="id") guarda
-o id do barbeiro que está sendo editado: vazio = cadastrando, preenchido = editando.
+// ### Passo 1: o esqueleto da página
+
+Crie o arquivo FRONT/barbeiros.html. Comece pelo topo (cabeçalho com os links e o botão Sair):
 
 // >>> FRONT/barbeiros.html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barbearia - Barbeiros</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -57,60 +61,57 @@ o id do barbeiro que está sendo editado: vazio = cadastrando, preenchido = edit
         <a href="agendamentos.html">Agendamentos</a>
         <button onclick="sair()">Sair</button>
     </header>
+// <<<
 
-    <main>
-        <h1>Barbeiros</h1>
+Abaixo, o título e os campos do formulário (um input para cada coluna que o usuário preenche):
 
-        <!-- Mesmo formulário serve para CADASTRAR e EDITAR -->
-        <form id="formBarbeiro" onsubmit="salvar(event)">
-            <h3 id="tituloForm">Cadastrar barbeiro</h3>
-            <input type="hidden" id="id">
-            <input type="text" id="nome" placeholder="Nome">
-            <input type="email" id="email" placeholder="E-mail">
-            <input type="text" id="cpf" placeholder="CPF">
-            <input type="password" id="senha" placeholder="Senha">
-            <input type="text" id="telefone" placeholder="Telefone">
-            <br>
-            <button type="submit" id="botaoSalvar">Cadastrar</button>
-            <button type="button" onclick="limparFormulario()">Cancelar</button>
-        </form>
+// >>> FRONT/barbeiros.html
+    <h1>Barbeiros</h1>
 
-        <!-- Busca: digita o termo, confirma e a tabela é atualizada -->
-        <form onsubmit="buscar(event)">
-            <input type="text" id="termo" placeholder="Buscar por nome ou e-mail">
-            <button type="submit">Buscar</button>
-            <button type="button" onclick="limparBusca()">Limpar</button>
-        </form>
+    <h3 id="titulo">Cadastrar barbeiro</h3>
 
-        <table>
-            <thead>
-                <tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Ações</th></tr>
-            </thead>
-            <tbody id="lista"></tbody>
-        </table>
-    </main>
+    <div id="formulario">
+        <input type="text" placeholder="nome" id="nome">
+        <input type="text" placeholder="e-mail" id="email">
+        <input type="text" placeholder="cpf" id="cpf">
+        <input type="password" placeholder="senha" id="senha">
+        <input type="text" placeholder="telefone" id="telefone">
+    </div>
+// <<<
+
+O botão de cadastrar e a div onde a lista vai aparecer:
+
+// >>> FRONT/barbeiros.html
+    <button onclick="cadastrar()" id="botaoCadastrar">cadastrar</button>
+// <<<
+
+// >>> FRONT/barbeiros.html
+    <div id="lista"></div>
 
     <script src="scripts.js"></script>
     <script>
-// <<<
-
-// O formulário de busca (segundo <form>) é da Aula 9. Na Aula 8 você pode deixar só o de cadastro.
-// O fim do arquivo (o </script></body></html>) está no final desta documentação.
-
-
-// ### AULA 8: o script da página (listar, cadastrar, excluir)
-
-// >>> FRONT/barbeiros.html
         protegerPagina()
 
         let barbeiros = []
 // <<<
 
 // protegerPagina() vem do scripts.js: sem sessão válida, volta para o login.
-// A variável barbeiros guarda a lista que veio da API (o Editar usa essa lista).
+// A variável barbeiros guarda a lista que veio da API (o editar vai usar essa lista).
+
+E feche o arquivo (por enquanto o script está vazio):
+
+// >>> FRONT/barbeiros.html
+    </script>
+</body>
+</html>
+// <<<
+
+Abra no navegador (Live Server). Você deve ver o título, os campos e o botão. Ainda não funciona nada.
 
 
-// ### Listar (R): GET + forEach + innerHTML
+// ### Passo 2: listar os barbeiros (R)
+
+Escreva a função carregar() DENTRO do <script>, abaixo do let barbeiros = []:
 
 // >>> FRONT/barbeiros.html
         async function carregar(busca) {
@@ -120,38 +121,50 @@ o id do barbeiro que está sendo editado: vazio = cadastrando, preenchido = edit
             const lista = document.getElementById('lista')
             lista.innerHTML = ''
 
-            barbeiros.forEach(barbeiro => {
+            barbeiros.forEach((barbeiro) => {
                 lista.innerHTML += `
-                    <tr>
-                        <td>${barbeiro.id}</td>
-                        <td>${barbeiro.nome}</td>
-                        <td>${barbeiro.email}</td>
-                        <td>${barbeiro.telefone || ''}</td>
-                        <td>
-                            <button onclick="editar(${barbeiro.id})">Editar</button>
-                            <button onclick="excluir(${barbeiro.id})">Excluir</button>
-                        </td>
-                    </tr>
-                `
+                <div class="item">
+                    <b>${barbeiro.nome}</b> <br>
+                    e-mail: ${barbeiro.email} <br>
+                    telefone: ${barbeiro.telefone || ''} <br>
+                    <button onclick="editar(${barbeiro.id})">editar</button>
+                    <button onclick="excluir(${barbeiro.id})">excluir</button>
+                </div>`
             })
         }
 // <<<
 
-// - api('/barbeiros') chama GET /barbeiros mandando o token (função do scripts.js).
-// - O parâmetro busca é da Aula 9: se vier vazio, o caminho é só '/barbeiros' e lista todos.
-// - ${barbeiro.telefone || ''} evita aparecer "null" na tela quando o telefone está vazio.
-// - Não mostramos cpf nem senha: a API nem devolve (estão em hash).
-
-
-// ### Cadastrar (C) e também Salvar a edição (U): POST ou PUT
-
-Se o input escondido id está vazio, é cadastro (POST). Se tem id, é edição (PUT).
+E a chamada, que fica SEMPRE na última linha do script (acima do </script>):
 
 // >>> FRONT/barbeiros.html
-        async function salvar(event) {
-            event.preventDefault()
+        carregar()
+// <<<
 
-            const id = document.getElementById('id').value
+// Como funciona:
+// - api('/barbeiros') chama GET /barbeiros mandando o token e devolve o array de barbeiros.
+// - lista.innerHTML = '' limpa a lista antes. O forEach monta um bloco (div class="item") para cada barbeiro.
+// - ${barbeiro.telefone || ''} evita aparecer "null" na tela quando o telefone está vazio.
+// - Não mostramos cpf nem senha: a API nem devolve (estão em hash).
+// - O parâmetro busca é do passo 5. Sem ele (vazio), o caminho é só '/barbeiros' e lista todos.
+// - Os botões editar e excluir já aparecem, mas ainda não funcionam: as funções existem só nos passos 4 e 6.
+//   Se clicar agora, o console (F12) mostra "excluir is not defined". É normal, siga os passos.
+//
+// Teste: recarregue a página. Os barbeiros do banco devem aparecer na lista.
+
+
+// ### Passo 3: cadastrar (C)
+
+Cole as duas funções ACIMA da linha carregar() do final.
+A primeira só limpa os campos depois de cadastrar (querySelectorAll pega todos os inputs de dentro da div formulario).
+
+// >>> FRONT/barbeiros.html
+        function limparCampos() {
+            document.querySelectorAll('#formulario input').forEach((input) => {
+                input.value = ''
+            })
+        }
+
+        async function cadastrar() {
             const barbeiro = {
                 nome: document.getElementById('nome').value,
                 email: document.getElementById('email').value,
@@ -160,24 +173,27 @@ Se o input escondido id está vazio, é cadastro (POST). Se tem id, é edição 
                 telefone: document.getElementById('telefone').value
             }
 
-            let dados
-            if (id) {
-                dados = await api(`/barbeiros/${id}`, 'PUT', barbeiro)
-            } else {
-                dados = await api('/barbeiros', 'POST', barbeiro)
-            }
-
+            const dados = await api('/barbeiros', 'POST', barbeiro)
             alert(dados.message)
-            limparFormulario()
+            limparCampos()
             carregar()
         }
 // <<<
 
-// Na Aula 8 só existe o ramo do POST. O ramo do PUT (if (id)) entra na Aula 9.
-// A API devolve { message: '...' }, e mostramos essa mensagem com alert.
+// Como funciona:
+// - Lemos cada input com .value e montamos um objeto barbeiro, igual ao pokemon da pokedex.
+// - api('/barbeiros', 'POST', barbeiro) é o fetch com method POST e o objeto no body.
+// - A API devolve { message: '...' } e mostramos essa mensagem com alert.
+// - Depois limpamos os campos e chamamos carregar() para o novo barbeiro aparecer na lista.
+//
+// Teste: cadastre um barbeiro. Ele deve aparecer na lista.
+// Critério 5.4: abra o pgAdmin e rode SELECT * FROM barbeiro; o cpf e a senha do novo barbeiro devem estar em hash
+// ($2b$10$...). Se estiverem em texto puro, a criptografia da API (#1_criptografia_back.txt) não está aplicada.
 
 
-// ### Excluir (D): DELETE com confirmação
+// ### Passo 4: excluir (D)
+
+Cole ACIMA da linha carregar() do final:
 
 // >>> FRONT/barbeiros.html
         async function excluir(id) {
@@ -189,18 +205,33 @@ Se o input escondido id está vazio, é cadastro (POST). Se tem id, é edição 
         }
 // <<<
 
-// confirm() abre a janelinha OK/Cancelar. Se cancelar, o return sai da função sem excluir.
+// - O botão excluir da lista chama excluir(${barbeiro.id}), então a função já recebe o id do barbeiro clicado.
+// - confirm() abre a janelinha OK/Cancelar. Se cancelar, o return sai da função sem excluir.
+// - DELETE não leva body. A rota é /barbeiros/ + o id.
+//
+// Teste: exclua o barbeiro que você acabou de cadastrar.
+// OBS: excluir um barbeiro apaga junto os clientes e agendamentos dele (ON DELETE CASCADE).
 
 
-// ### AULA 9: Busca por termo (critério 5.2)
+// ### Passo 5: busca por termo
 
-O usuário digita o termo, confirma (botão Buscar ou Enter) e a tabela mostra só os registros que combinam.
-O botão Limpar volta para a lista completa.
-A parte da API é o ?busca= com ILIKE (veja #4_filtros_e_JOIN.txt).
+O usuário digita o termo, confirma (botão buscar) e a lista mostra só os registros que combinam.
+O botão limpar busca volta para a lista completa. A parte da API (?busca= e ILIKE) está em #4_filtros_e_JOIN.txt.
+
+No HTML, cole ACIMA da linha <div id="lista"></div>:
 
 // >>> FRONT/barbeiros.html
-        function buscar(event) {
-            event.preventDefault()
+    <br><br>
+
+    <input type="text" placeholder="buscar por nome ou e-mail" id="termo">
+    <button onclick="buscar()">buscar</button>
+    <button onclick="limparBusca()">limpar busca</button>
+// <<<
+
+No script, cole ACIMA da linha carregar() do final:
+
+// >>> FRONT/barbeiros.html
+        function buscar() {
             carregar(document.getElementById('termo').value)
         }
 
@@ -210,97 +241,120 @@ A parte da API é o ?busca= com ILIKE (veja #4_filtros_e_JOIN.txt).
         }
 // <<<
 
+// - buscar() lê o termo digitado e chama carregar(termo). Lá dentro, o caminho vira /barbeiros?busca=termo.
+// - encodeURIComponent protege o termo na URL (espaços e acentos viram códigos seguros).
+// - limparBusca() esvazia o campo e chama carregar() sem termo: lista tudo de novo.
+//
+// Teste: digite "raf" e clique em buscar; só o Rafael deve aparecer. Clique em limpar busca.
 
-// ### AULA 9: Editar (critério 5.5)
 
-Passo a passo do que acontece:
-1. O usuário clica em Editar na linha do barbeiro.
-2. editar(id) acha o barbeiro na lista (find) e joga os dados nos inputs do formulário.
-3. O input escondido id passa a ter o id do barbeiro, então o salvar() sabe que é PUT.
-4. O usuário muda o que quiser e clica em "Salvar alterações".
-5. A tabela recarrega e mostra o dado novo.
+// ### Passo 6: editar (U)
 
-CPF e senha não voltam preenchidos (estão em hash, não dá para mostrar). Só são trocados se o usuário digitar de novo.
+Como funciona, em ordem:
+1. O usuário clica em editar no barbeiro.
+2. editar(id) acha o barbeiro na lista (find) e joga os dados nos campos do formulário.
+3. Guardamos o id num campo escondido, e trocamos o botão cadastrar pelo botão salvar alterações.
+4. O usuário muda o que quiser e clica em salvar alterações (fetch PUT).
+5. A lista recarrega e mostra o dado novo.
+
+CPF e senha NÃO voltam preenchidos: estão em hash e não dá para mostrar. Só são trocados se o usuário digitar de novo.
+
+No HTML, o campo escondido que guarda o id vai logo ABAIXO da div formulario e ACIMA do botão cadastrar:
 
 // >>> FRONT/barbeiros.html
-        // Preenche o formulário com os dados do barbeiro escolhido
+    <input type="hidden" id="id">
+// <<<
+
+E os dois botões novos, logo ABAIXO do botão cadastrar:
+
+// >>> FRONT/barbeiros.html
+    <button onclick="salvarEdicao()" id="botaoEditar" style="display: none">salvar alterações</button>
+    <button onclick="limpar()">cancelar</button>
+// <<<
+
+No script, cole ACIMA da linha carregar() do final:
+
+// >>> FRONT/barbeiros.html
         function editar(id) {
-            const barbeiro = barbeiros.find(b => b.id === id)
+            const barbeiro = barbeiros.find((b) => b.id === id)
 
             document.getElementById('id').value = barbeiro.id
             document.getElementById('nome').value = barbeiro.nome
             document.getElementById('email').value = barbeiro.email
             document.getElementById('telefone').value = barbeiro.telefone || ''
-            // CPF e senha estão criptografados: só preenche se quiser trocar
-            document.getElementById('cpf').placeholder = 'Novo CPF (opcional)'
-            document.getElementById('senha').placeholder = 'Nova senha (opcional)'
+            // cpf e senha estão em hash: só preenche se quiser trocar
+            document.getElementById('cpf').value = ''
+            document.getElementById('senha').value = ''
+            document.getElementById('cpf').placeholder = 'novo cpf (opcional)'
+            document.getElementById('senha').placeholder = 'nova senha (opcional)'
 
-            document.getElementById('tituloForm').textContent = 'Editar barbeiro'
-            document.getElementById('botaoSalvar').textContent = 'Salvar alterações'
+            document.getElementById('titulo').textContent = 'Editar barbeiro'
+            document.getElementById('botaoCadastrar').style.display = 'none'
+            document.getElementById('botaoEditar').style.display = 'inline'
         }
 
-        function limparFormulario() {
-            document.getElementById('formBarbeiro').reset()
+        async function salvarEdicao() {
+            const id = document.getElementById('id').value
+            const barbeiro = {
+                nome: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                cpf: document.getElementById('cpf').value,
+                senha: document.getElementById('senha').value,
+                telefone: document.getElementById('telefone').value
+            }
+
+            const dados = await api(`/barbeiros/${id}`, 'PUT', barbeiro)
+            alert(dados.message)
+            limpar()
+            carregar()
+        }
+
+        function limpar() {
+            limparCampos()
             document.getElementById('id').value = ''
-            document.getElementById('cpf').placeholder = 'CPF'
-            document.getElementById('senha').placeholder = 'Senha'
-            document.getElementById('tituloForm').textContent = 'Cadastrar barbeiro'
-            document.getElementById('botaoSalvar').textContent = 'Cadastrar'
+            document.getElementById('cpf').placeholder = 'cpf'
+            document.getElementById('senha').placeholder = 'senha'
+            document.getElementById('titulo').textContent = 'Cadastrar barbeiro'
+            document.getElementById('botaoCadastrar').style.display = 'inline'
+            document.getElementById('botaoEditar').style.display = 'none'
         }
 // <<<
 
+// - barbeiros.find((b) => b.id === id) acha na lista o barbeiro que tem o id clicado.
+// - salvarEdicao() é igual ao cadastrar(), mas com PUT e o id na rota: /barbeiros/ + id.
+// - limpar() deixa a tela como no começo (também é o botão cancelar).
+// - style.display = 'none' esconde o botão e 'inline' mostra.
+//
+// Teste: clique em editar, mude o nome, clique em salvar alterações. O nome novo aparece na lista e no banco.
+// Teste: edite sem digitar CPF e senha; eles continuam como estavam.
 
-// ### Fim do arquivo: carregar a lista ao abrir a página
 
-// >>> FRONT/barbeiros.html
+// ### Como o arquivo termina
+
+Confira se as últimas linhas do <script> são sempre estas (a chamada carregar() por último):
+
         carregar()
     </script>
 </body>
 </html>
-// <<<
 
 
-// ### Páginas que ainda não existem (clientes e agendamentos)
+// ### Revisão pela lista de verificação (barbeiro vale 13 pontos)
 
-Os links da principal e do cabeçalho apontam para clientes.html e agendamentos.html.
-Enquanto você não faz essas telas, crie as duas com este modelo mínimo (troque o título):
-
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <title>Barbearia - Clientes</title>
-        <link rel="stylesheet" href="styles.css">
-    </head>
-    <body>
-        <header>
-            <a href="principal.html">Principal</a>
-            <a href="barbeiros.html">Barbeiros</a>
-            <a href="agendamentos.html">Agendamentos</a>
-            <button onclick="sair()">Sair</button>
-        </header>
-        <main><h1>Clientes</h1></main>
-        <script src="scripts.js"></script>
-        <script>protegerPagina()</script>
-    </body>
-    </html>
-
-
-// ### Revisão da Aula 9 pela lista de verificação (barbeiro vale 13 pontos)
-
-[ ] 5.1 lista os barbeiros e o botão Excluir remove (peso 2)
+[ ] 5.1 a lista mostra os barbeiros e o botão excluir remove (peso 2)
 [ ] 5.2 digitar um termo e a lista mostra só os que combinam (peso 3)
-[ ] 5.3 cadastrar pela tela e o novo barbeiro aparece na lista, e fica no banco (peso 2)
+[ ] 5.3 cadastrar pela tela, o barbeiro aparece na lista e fica no banco (peso 2)
 [ ] 5.4 no pgAdmin, cpf e senha do novo barbeiro estão em hash (peso 3)
-[ ] 5.5 editar, salvar e a mudança aparece na lista e no banco (peso 3)
+[ ] 5.5 editar, salvar, e a mudança aparece na lista e no banco (peso 3)
 
 
 // ### Erros comuns
 
-- A tabela repete as linhas a cada ação: faltou lista.innerHTML = '' antes do forEach.
-- Aparece "undefined" na tabela: o nome do campo está diferente do que a API devolve (confira no Network, F12).
-- O Editar não preenche nada: a função editar usa a lista "barbeiros"; ela só é preenchida dentro do carregar().
-- O Editar/Excluir falha só no navegador: faltou PUT/DELETE em methods no CORS do server.js.
-- O botão Cadastrar recarrega a página: faltou event.preventDefault() no começo da função.
-- onclick="editar(${barbeiro.id})" sem as crases: o HTML montado em string precisa estar entre crases ( ` ), não aspas.
-- Editou o barbeiro mas o CPF mudou "sozinho": digitou algo no campo CPF. Deixe vazio para manter o atual.
+- A lista repete os itens a cada ação: faltou lista.innerHTML = '' antes do forEach.
+- Aparece "undefined" na lista: o nome do campo está diferente do que a API devolve (confira o JSON no Network, F12).
+- "editar is not defined" ou "excluir is not defined": a função ainda não foi colada, ou foi colada fora do <script>.
+- O editar não preenche nada: a função usa a lista "barbeiros", que só é preenchida dentro do carregar().
+- Editar e excluir falham só no navegador: faltou PUT e DELETE em methods no CORS do server.js.
+- O HTML montado em string precisa estar entre crases ( ` ), não entre aspas.
+- Editou o barbeiro e o CPF mudou "sozinho": algum texto ficou digitado no campo cpf. Deixe vazio para manter o atual.
+- Clicar em cadastrar não faz nada: confira o F12 > Console; quase sempre é erro de digitação no nome da função.
