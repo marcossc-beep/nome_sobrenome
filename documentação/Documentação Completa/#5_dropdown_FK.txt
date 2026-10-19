@@ -1,0 +1,202 @@
+// ### AULA 10 (tela) e AULA 4 (API): Cliente associado a um barbeiro (dropdown com chave estrangeira)
+//
+// Critério que esta documentação ajuda a cumprir:
+//   6.1 Inserção de um novo cliente associando-o a um barbeiro (peso 3)
+//
+// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
+// Não copie essas linhas, copie só o que está entre elas.
+
+
+// ### A ideia
+
+O caderno diz: "Ao cadastrar um novo cliente, o usuário deve associá-lo a um barbeiro."
+No banco isso é a chave estrangeira cliente.barbeiro_id.
+O usuário NÃO deve digitar o número do barbeiro. Ele escolhe o NOME numa lista (<select>)
+e o sistema envia o ID escondido.
+
+1. O front busca os barbeiros (GET /barbeiros).
+2. Cada barbeiro vira uma <option>: o TEXTO é o nome e o VALUE é o id.
+3. Ao salvar, o id escolhido vai no corpo do POST como barbeiro_id.
+4. A API confere se esse barbeiro existe antes de gravar.
+
+
+// ### API (Aula 4): POST /clientes
+
+A listagem GET /clientes (com JOIN) está em #4_filtros_e_JOIN.txt.
+
+// >>> server.js
+servidor.post('/clientes', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.nome || !body.barbeiro_id) {
+        return reply.status(400).send({ message: 'Nome e barbeiro são obrigatórios!' })
+    }
+
+    const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
+    if (barbeiro.rows.length === 0) {
+        return reply.status(400).send({ message: 'Barbeiro informado não existe!' })
+    }
+
+    await sql.query(
+        'INSERT INTO cliente (nome, telefone, estilo_corte, barbeiro_id) VALUES ($1, $2, $3, $4)',
+        [body.nome, body.telefone, body.estilo_corte, body.barbeiro_id]
+    )
+
+    return reply.status(201).send({ message: 'Cliente cadastrado!' })
+})
+// <<<
+
+// A conferência (SELECT id FROM barbeiro...) devolve uma mensagem clara. Sem ela, um barbeiro_id inexistente
+// estoura um erro de chave estrangeira do Postgres e a API responde 500.
+
+### Testes no referencias.http
+
+POST http://localhost:6767/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Pedro Henrique",
+    "telefone": "48988884444",
+    "estilo_corte": "Low fade",
+    "barbeiro_id": 1
+}
+
+### Barbeiro que não existe (esperado: 400)
+POST http://localhost:6767/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Teste",
+    "barbeiro_id": 999
+}
+
+
+// ### Tela (Aula 10): FRONT/clientes.html
+
+// >>> FRONT/clientes.html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia - Clientes</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="principal.html">Principal</a>
+        <a href="barbeiros.html">Barbeiros</a>
+        <a href="agendamentos.html">Agendamentos</a>
+        <button onclick="sair()">Sair</button>
+    </header>
+
+    <main>
+        <h1>Clientes</h1>
+
+        <form id="formCliente" onsubmit="cadastrar(event)">
+            <h3>Cadastrar cliente</h3>
+            <input type="text" id="nome" placeholder="Nome">
+            <input type="text" id="telefone" placeholder="Telefone">
+            <input type="text" id="estilo_corte" placeholder="Estilo de corte">
+
+            <!-- O cliente PRECISA ser associado a um barbeiro -->
+            <select id="barbeiro_id">
+                <option value="">Selecione o barbeiro...</option>
+            </select>
+            <br>
+            <button type="submit">Cadastrar</button>
+        </form>
+
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Nome</th><th>Telefone</th><th>Estilo de corte</th><th>Barbeiro</th></tr>
+            </thead>
+            <tbody id="lista"></tbody>
+        </table>
+    </main>
+
+    <script src="scripts.js"></script>
+    <script>
+        protegerPagina()
+
+        // Preenche o <select> com os barbeiros do banco (value = id)
+        async function carregarBarbeiros() {
+            const barbeiros = await api('/barbeiros')
+            const select = document.getElementById('barbeiro_id')
+
+            barbeiros.forEach(barbeiro => {
+                const option = document.createElement('option')
+                option.value = barbeiro.id
+                option.textContent = barbeiro.nome
+                select.appendChild(option)
+            })
+        }
+
+        async function carregarClientes() {
+            const clientes = await api('/clientes')
+            const lista = document.getElementById('lista')
+            lista.innerHTML = ''
+
+            clientes.forEach(cliente => {
+                lista.innerHTML += `
+                    <tr>
+                        <td>${cliente.id}</td>
+                        <td>${cliente.nome}</td>
+                        <td>${cliente.telefone || ''}</td>
+                        <td>${cliente.estilo_corte || ''}</td>
+                        <td>${cliente.barbeiro_nome}</td>
+                    </tr>
+                `
+            })
+        }
+
+        async function cadastrar(event) {
+            event.preventDefault()
+
+            const cliente = {
+                nome: document.getElementById('nome').value,
+                telefone: document.getElementById('telefone').value,
+                estilo_corte: document.getElementById('estilo_corte').value,
+                barbeiro_id: document.getElementById('barbeiro_id').value
+            }
+
+            if (!cliente.barbeiro_id) {
+                alert('Selecione um barbeiro!')
+                return
+            }
+
+            const dados = await api('/clientes', 'POST', cliente)
+            alert(dados.message)
+            document.getElementById('formCliente').reset()
+            carregarClientes()
+        }
+
+        carregarBarbeiros()
+        carregarClientes()
+    </script>
+</body>
+</html>
+// <<<
+
+// Pontos para entender:
+// - option.value = barbeiro.id        vai para o banco (a chave estrangeira)
+// - option.textContent = barbeiro.nome  é o que o usuário lê
+// - A primeira <option value=""> é o "Selecione...". Se o usuário não escolher, o value é vazio e bloqueamos o envio.
+// - A listagem usa cliente.barbeiro_nome, que vem do JOIN do GET /clientes.
+// - Mesma ideia para os selects de barbeiro e cliente na tela de agendamentos (#6_agendamentos.txt).
+
+
+// ### Revisão da Aula 10 pela lista de verificação
+
+[ ] 6.1 cadastrar um cliente escolhendo o barbeiro na lista, e o cliente aparece com o nome do barbeiro (peso 3)
+[ ] sem escolher barbeiro, o cadastro é bloqueado
+
+
+// ### Erros comuns
+
+- O select fica vazio: o GET /barbeiros falhou (sem token, API parada). Veja o Network no F12.
+- Cadastrou mas o barbeiro aparece como "undefined": o campo vem do JOIN, confira o apelido barbeiro_nome no GET /clientes.
+- "Barbeiro informado não existe!": o value do option está errado (use barbeiro.id, não o nome).
+- O barbeiro_id chega como texto ("1"). Está certo, o Postgres converte sozinho.

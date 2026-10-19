@@ -1,0 +1,242 @@
+// ### AULA 4 (API) e AULA 11 (tela): Agendamentos (listar por data e atualizar a data)
+//
+// Critérios que esta documentação ajuda a cumprir:
+//   7.1 Listar os agendamentos ordenados por data (peso 3)
+//   7.2 Atualizar a data de um agendamento (peso 2)
+//
+// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
+// Não copie essas linhas, copie só o que está entre elas.
+
+
+// ### Datas: como o sistema guarda e como o front envia
+
+- No banco a coluna é TIMESTAMP (data + hora juntas): 2026-11-18 14:30:00.
+- Front e API trocam datas no formato ISO: 2026-11-18T14:30 (o T separa a data da hora).
+- O input <input type="datetime-local"> já devolve exatamente esse formato no .value. Não precisa converter.
+- Para MOSTRAR a data em português na tela: new Date(data).toLocaleString('pt-BR', ...)
+  (a função formatarData do scripts.js faz isso).
+
+
+// ### API: listar ordenado (critério 7.1)
+
+O GET /agendamentos (JOIN triplo e ORDER BY data_agendamento) está explicado em #4_filtros_e_JOIN.txt.
+
+
+// ### API: cadastrar e atualizar a data (critério 7.2)
+
+O POST existe para você conseguir criar agendamentos de teste pela tela.
+O PUT recebe SÓ a data nova e muda só essa coluna.
+
+// >>> server.js
+servidor.post('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.data_agendamento || !body.servico || !body.barbeiro_id || !body.cliente_id) {
+        return reply.status(400).send({ message: 'Data, serviço, barbeiro e cliente são obrigatórios!' })
+    }
+
+    await sql.query(
+        'INSERT INTO agendamento (data_agendamento, servico, barbeiro_id, cliente_id) VALUES ($1, $2, $3, $4)',
+        [body.data_agendamento, body.servico, body.barbeiro_id, body.cliente_id]
+    )
+
+    return reply.status(201).send({ message: 'Agendamento cadastrado!' })
+})
+// <<<
+
+// >>> server.js
+// Atualiza SÓ a data do agendamento
+servidor.put('/agendamentos/:id', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+    const id = request.params.id
+
+    if (!body || !body.data_agendamento) {
+        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
+    }
+
+    const resultado = await sql.query(
+        'UPDATE agendamento SET data_agendamento = $1 WHERE id = $2',
+        [body.data_agendamento, id]
+    )
+
+    if (resultado.rowCount === 0) {
+        return reply.status(404).send({ message: 'Agendamento não existe!' })
+    }
+
+    return reply.status(200).send({ message: 'Data do agendamento atualizada!' })
+})
+// <<<
+
+// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe (404).
+// Sempre use WHERE no UPDATE. Sem o WHERE, TODAS as linhas da tabela mudam de data.
+
+### Testes no referencias.http
+
+POST http://localhost:6767/agendamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_agendamento": "2026-11-21T15:00",
+    "servico": "Barba",
+    "barbeiro_id": 1,
+    "cliente_id": 1
+}
+
+### Atualizar a data do agendamento 1 (depois rode o GET e veja a ordem mudar)
+PUT http://localhost:6767/agendamentos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_agendamento": "2026-11-17T08:30"
+}
+
+
+// ### Tela (Aula 11): FRONT/agendamentos.html
+
+A tela tem três coisas:
+1. A tabela com TODOS os dados do barbeiro e do cliente, na ordem que a API devolve (já ordenada por data).
+2. Em cada linha, um campo de data e o botão "Atualizar data" (critério 7.2). O id do campo usa o id do agendamento
+   (data-${ag.id}) para o botão saber qual campo ler.
+3. Um formulário para criar agendamentos de teste, com selects de barbeiro e cliente (mesma ideia de #5_dropdown_FK.txt).
+
+// >>> FRONT/agendamentos.html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia - Agendamentos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a href="principal.html">Principal</a>
+        <a href="barbeiros.html">Barbeiros</a>
+        <a href="clientes.html">Clientes</a>
+        <button onclick="sair()">Sair</button>
+    </header>
+
+    <main>
+        <h1>Agendamentos</h1>
+
+        <form id="formAgendamento" onsubmit="cadastrar(event)">
+            <h3>Novo agendamento</h3>
+            <input type="datetime-local" id="data_agendamento">
+            <input type="text" id="servico" placeholder="Serviço (ex: Corte + Barba)">
+            <select id="barbeiro_id"><option value="">Barbeiro...</option></select>
+            <select id="cliente_id"><option value="">Cliente...</option></select>
+            <br>
+            <button type="submit">Agendar</button>
+        </form>
+
+        <!-- Listagem ordenada por data com TODOS os dados do barbeiro e do cliente -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th><th>Serviço</th>
+                    <th>Barbeiro</th><th>E-mail barbeiro</th><th>Tel. barbeiro</th>
+                    <th>Cliente</th><th>Tel. cliente</th><th>Estilo</th>
+                    <th>Nova data</th>
+                </tr>
+            </thead>
+            <tbody id="lista"></tbody>
+        </table>
+    </main>
+
+    <script src="scripts.js"></script>
+    <script>
+        protegerPagina()
+
+        async function carregarAgendamentos() {
+            const agendamentos = await api('/agendamentos')
+            const lista = document.getElementById('lista')
+            lista.innerHTML = ''
+
+            agendamentos.forEach(ag => {
+                lista.innerHTML += `
+                    <tr>
+                        <td>${formatarData(ag.data_agendamento)}</td>
+                        <td>${ag.servico}</td>
+                        <td>${ag.barbeiro_nome}</td>
+                        <td>${ag.barbeiro_email}</td>
+                        <td>${ag.barbeiro_telefone || ''}</td>
+                        <td>${ag.cliente_nome}</td>
+                        <td>${ag.cliente_telefone || ''}</td>
+                        <td>${ag.cliente_estilo_corte || ''}</td>
+                        <td>
+                            <input type="datetime-local" id="data-${ag.id}">
+                            <button onclick="atualizarData(${ag.id})">Atualizar data</button>
+                        </td>
+                    </tr>
+                `
+            })
+        }
+
+        async function atualizarData(id) {
+            const novaData = document.getElementById(`data-${id}`).value
+
+            if (!novaData) {
+                alert('Escolha a nova data!')
+                return
+            }
+
+            const dados = await api(`/agendamentos/${id}`, 'PUT', { data_agendamento: novaData })
+            alert(dados.message)
+            carregarAgendamentos()
+        }
+
+        async function carregarSelects() {
+            const barbeiros = await api('/barbeiros')
+            const clientes = await api('/clientes')
+
+            barbeiros.forEach(b => {
+                document.getElementById('barbeiro_id').innerHTML += `<option value="${b.id}">${b.nome}</option>`
+            })
+            clientes.forEach(c => {
+                document.getElementById('cliente_id').innerHTML += `<option value="${c.id}">${c.nome}</option>`
+            })
+        }
+
+        async function cadastrar(event) {
+            event.preventDefault()
+
+            const agendamento = {
+                data_agendamento: document.getElementById('data_agendamento').value,
+                servico: document.getElementById('servico').value,
+                barbeiro_id: document.getElementById('barbeiro_id').value,
+                cliente_id: document.getElementById('cliente_id').value
+            }
+
+            const dados = await api('/agendamentos', 'POST', agendamento)
+            alert(dados.message)
+            document.getElementById('formAgendamento').reset()
+            carregarAgendamentos()
+        }
+
+        carregarSelects()
+        carregarAgendamentos()
+    </script>
+</body>
+</html>
+// <<<
+
+// Depois de atualizar a data, carregarAgendamentos() busca a lista de novo e ela já aparece na nova ordem.
+// Cada <td> mostra um campo do JOIN. O nome do campo precisa ser igual ao apelido (AS) da consulta.
+
+
+// ### Revisão da Aula 11 pela lista de verificação
+
+[ ] 7.1 a tabela mostra os agendamentos em ordem de data, com dados do barbeiro e do cliente (peso 3)
+[ ] 7.2 escolher uma nova data, clicar em Atualizar e a tabela mostra a data nova, e o banco guarda (peso 2)
+
+
+// ### Erros comuns
+
+- A data aparece "Invalid Date": o campo da API tem outro nome (confira o apelido no SELECT e no Network do F12).
+- A lista não está ordenada: faltou o ORDER BY data_agendamento no GET /agendamentos.
+- A data mudou de horário (uma ou três horas a mais): o JavaScript converteu o fuso. Mande a data como veio do input
+  (2026-11-17T08:30) e deixe o Postgres guardar como TIMESTAMP, sem timezone.
+- Atualizou e nada mudou: o botão está lendo o campo errado. Confira se o id do input é data-${ag.id}.
+- "Escolha a nova data!": o campo da linha está vazio, o usuário precisa preencher antes de clicar.

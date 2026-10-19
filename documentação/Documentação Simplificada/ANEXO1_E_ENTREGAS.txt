@@ -1,0 +1,109 @@
+// ### AULA 1: Lendo a prova, preenchendo o Anexo 1 e organizando as entregas
+//
+// Critérios que esta documentação ajuda a cumprir:
+//   1.1 Identificou no mínimo 4 requisitos do sistema conforme Anexo 1 (peso 2)
+//   1.2 Identificou os requisitos de infraestrutura, SGBD e linguagem, conforme Anexo 1 (peso 1)
+//   1.3 Gerou o diagrama entidade relacionamento (peso 1)  -> veja SQL.txt, seção "Gerando o DER"
+
+
+// ### Como ler o caderno de prova
+
+1. Leia tudo uma vez, sem pressa: contextualização, regras de negócio, desafio e entregas.
+2. Sublinhe cada REGRA DE NEGÓCIO. Elas são a lista do que o sistema precisa fazer.
+3. Olhe a tabela de entregas: são 8 entregas e a soma dos tempos é 180 minutos (15+5+20+20+20+30+30+40),
+   exatamente as 3 horas da prova. Use esse relógio.
+4. Ordem sugerida: faça na ordem da tabela. Cada entrega é um pedaço da lista de verificação do avaliador.
+
+
+// ### Anexo 1 (ENTREGA 1: documentacao.pdf)
+
+O Anexo 1 é o arquivo "ANEXO 1 - Documentação de Software_Editável.doc" que está na raiz do projeto.
+Ele tem DUAS partes:
+
+1.1 Tabela de requisitos funcionais (precisa de NO MÍNIMO 4)
+1.2 Requisitos de infraestrutura:
+      SGBD utilizado + versão
+      Linguagem de programação + versão
+
+Depois de preencher, salve como PDF com o nome documentacao.pdf
+(Word ou LibreOffice: Arquivo > Salvar como > PDF).
+
+
+// ### Como tirar requisitos funcionais da prova
+
+Requisito funcional = algo que o sistema FAZ, que o usuário consegue usar.
+Fórmula simples: "O sistema deve permitir ..." ou "O sistema deve exibir ...".
+
+Cada regra de negócio da prova vira um ou mais requisitos. Para cada um escreva:
+- ID: RF01, RF02, RF03...
+- Requisito: um nome curto (2 a 4 palavras)
+- Descrição: uma frase completa dizendo o que o sistema faz
+
+Exemplo em OUTRO sistema (uma biblioteca escolar), só para mostrar o formato:
+
+| ID   | Requisito             | Descrição                                                                           |
+|------|-----------------------|-------------------------------------------------------------------------------------|
+| RF01 | Autenticar usuário    | O sistema deve permitir o login com e-mail e senha cadastrados.                     |
+| RF02 | Exibir tela principal | O sistema deve exibir o nome do usuário logado e o acesso às demais funcionalidades. |
+| RF03 | Cadastrar livro       | O sistema deve permitir cadastrar um livro associando-o a uma categoria.            |
+| RF04 | Buscar livro          | O sistema deve permitir buscar livros por um termo, atualizando a listagem.         |
+| RF05 | Listar empréstimos    | O sistema deve listar os empréstimos ordenados pela data de devolução.              |
+
+Dicas:
+- Prefira 6 a 8 requisitos. O mínimo para o critério 1.1 é 4, mas sobrar não atrapalha.
+- Não escreva "como" (banco, bcrypt, JWT). Isso é requisito de infraestrutura/segurança, não o que o usuário vê.
+- Use os termos da própria prova (barbeiro, cliente, agendamento...), assim o avaliador reconhece o requisito.
+- Releia cada regra de negócio e pergunte: "o que o sistema precisa fazer para cumprir isso?"
+
+
+// ### Requisitos de infraestrutura (critério 1.2)
+
+Preencha com o que realmente está instalado na máquina da prova:
+
+    SGBD utilizado: PostgreSQL        Versão: 17
+    Linguagem de programação: JavaScript (ES6, executado com Node.js)    Versão: ES6
+
+Conferindo as versões:
+- PostgreSQL: no pgAdmin, Query Tool, rode   SELECT version();
+- Node.js: no terminal, rode   node -v
+
+"Todos os requisitos de infraestrutura" = SGBD E linguagem, cada um com a sua versão. Não deixe nenhum campo em branco.
+
+
+// ### Organização das entregas da prova
+
+| Nº | Entrega                          | Arquivo                      | Tempo  |
+|----|----------------------------------|------------------------------|--------|
+| 1  | Documentação de software         | documentacao.pdf             | 15 min |
+| 2  | Diagrama entidade relacionamento | der.png ou der.pdf           | 5 min  |
+| 3  | Script de criação e população    | saep_db.sql                  | 20 min |
+| 4  | Login                            | pasta sistema                | 20 min |
+| 5  | Principal                        | pasta sistema                | 20 min |
+| 6  | Gerenciamento de Barbeiro        | pasta sistema                | 30 min |
+| 7  | Gerenciamento de Cliente         | pasta sistema                | 30 min |
+| 8  | Gerenciamento de Agendamentos    | pasta sistema                | 40 min |
+
+
+// ### Montando o .zip no final
+
+O caderno pede: um diretório compactado, nomeado com o seu NOME COMPLETO, contendo:
+
+    seu_nome_completo.zip
+    ├── documentacao.pdf
+    ├── der.png
+    ├── saep_db.sql
+    └── sistema/
+        ├── server.js
+        ├── package.json
+        ├── package-lock.json
+        ├── referencias.http
+        └── FRONT/   (index.html, principal.html, barbeiros.html, clientes.html, agendamentos.html, scripts.js, styles.css)
+
+Passo a passo:
+1. Na área de trabalho, crie uma pasta com o seu nome completo.
+2. Copie para dentro dela: documentacao.pdf, der.png e saep_db.sql.
+3. Crie dentro dela a pasta  sistema  e copie para lá: server.js, package.json, package-lock.json,
+   referencias.http e a pasta FRONT.
+4. A pasta node_modules NÃO precisa ir (é grande e se recria com npm install).
+5. Botão direito na pasta > Enviar para > Pasta compactada (ou use o 7-Zip).
+6. Abra o .zip e confira se os arquivos estão lá dentro antes de entregar.

@@ -1,0 +1,310 @@
+// ### AULA 5: Criptografia no back-end (bcrypt + JWT) e rota de login
+//
+// Critérios que esta documentação ajuda a cumprir:
+//   3.1 Autenticação com login e senha do banco (peso 1)
+//   3.2 Sessão do usuário autenticado com tempo de expiração (peso 3)
+//   3.3 Validação em caso de falha de autenticação (peso 2)
+//   4.1 Nome do usuário autenticado disponível para a tela principal (peso 2)
+//   5.4 Criptografar pelo menos a senha e o CPF do barbeiro no banco (peso 3)
+//
+// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
+// Não copie essas linhas, copie só o que está entre elas.
+
+
+// ### O problema
+
+Se a senha e o CPF ficam escritos em texto puro no banco, qualquer pessoa que acessar o banco lê tudo.
+O caderno de prova fala em LGPD: dados pessoais precisam ficar protegidos.
+Usamos duas ferramentas:
+- bcrypt: transforma a senha e o CPF em um "embaralhado" que não volta mais (hash).
+- JWT: um "crachá" digital que o servidor entrega no login e que tem prazo de validade.
+
+
+// ### bcrypt: o que é hash
+
+- Criptografia comum: vai e volta (criptografa e descriptografa com uma chave).
+- Hash (bcrypt): só vai. Depois que vira hash NÃO existe como voltar ao texto original.
+- Salt: texto aleatório misturado antes do hash. Duas pessoas com a senha "123" ficam com hashes diferentes.
+- O número 10 em bcrypt.hash(texto, 10) é o custo (quantas rodadas). 10 é o padrão.
+
+Como fica salvo no banco (60 caracteres, por isso as colunas cpf e senha são VARCHAR(255)):
+
+    $2b$10$Q3x9...
+
+Se o hash não volta, como o login confere a senha?
+O bcrypt pega a senha digitada, aplica o mesmo processo e compara com o hash do banco:
+
+    const senhaValida = await bcrypt.compare(body.senha, usuario.senha)   // true ou false
+
+Consequência importante: o CPF salvo com hash NÃO pode ser mostrado de volta na tela.
+Por isso as listagens de barbeiro não trazem as colunas cpf e senha.
+
+
+// ### JWT: o crachá com validade
+
+Depois do login o servidor devolve um token. Em toda requisição seguinte o front mostra esse token.
+Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
+- dados (payload): o que guardamos dentro, como id, nome e e-mail. NUNCA a senha.
+- assinatura: garante que ninguém alterou o token.
+- exp: o horário em que o token vence. É isso que cumpre o critério 3.2 (sessão com expiração).
+
+Na prova a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
+
+
+// ### Passo 1: imports e configuração do server.js
+
+// >>> server.js
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import jwt from '@fastify/jwt'
+import bcrypt from 'bcrypt'
+import { Pool } from 'pg'
+
+const servidor = Fastify()
+// <<<
+
+// >>> server.js
+servidor.register(jwt, {
+    secret: 'saep_barbearia_2026',
+    sign: { expiresIn: '30m' }
+})
+// <<<
+
+// expiresIn: '30m' = o token vale 30 minutos. Depois disso a API responde 401.
+// Para testar a expiração em aula, troque para '1m', faça login, espere 1 minuto e chame uma rota protegida.
+// Volte para '30m' depois.
+
+// A conexão com o banco (Pool) é a mesma da Documentação Simplificada, API.txt.
+// Confira usuário, senha, porta e o nome do banco (saep_db) da SUA máquina.
+
+
+// ### Passo 2: a função autenticar (porteiro das rotas)
+
+// >>> server.js
+async function autenticar(request, reply) {
+    try {
+        await request.jwtVerify()
+    } catch (erro) {
+        return reply.status(401).send({ message: 'Sessão expirada ou inválida. Faça login novamente.' })
+    }
+}
+// <<<
+
+// jwtVerify lê o header "Authorization: Bearer <token>", confere a assinatura e o prazo.
+// Se estiver tudo certo, a rota continua. Se não, responde 401.
+//
+// Para proteger uma rota basta colocar { preHandler: autenticar } antes da função:
+//
+//     servidor.get('/barbeiros', { preHandler: autenticar }, async (request, reply) => { ... })
+//
+// Depois desta aula, volte nas rotas que você já criou (barbeiro, cliente, agendamento)
+// e acrescente { preHandler: autenticar } em todas elas. A rota /login NÃO leva preHandler.
+
+
+// ### Passo 3: rota POST /login
+
+Regras que o critério 3.3 espera:
+- 400 quando faltar e-mail ou senha.
+- 401 quando o e-mail não existir OU a senha estiver errada (use a MESMA mensagem nos dois casos,
+  assim ninguém descobre quais e-mails existem no sistema).
+- Se estiver certo: gerar o token e devolver também o nome do usuário (critério 4.1).
+
+// >>> server.js
+servidor.post('/login', async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.email || !body.senha) {
+        return reply.status(400).send({ message: 'E-mail e senha são obrigatórios!' })
+    }
+
+    const resultado = await sql.query('SELECT * FROM usuario WHERE email = $1', [body.email])
+
+    if (resultado.rows.length === 0) {
+        return reply.status(401).send({ message: 'Usuário ou senha inválidos!' })
+    }
+
+    const usuario = resultado.rows[0]
+    const senhaValida = await bcrypt.compare(body.senha, usuario.senha)
+
+    if (!senhaValida) {
+        return reply.status(401).send({ message: 'Usuário ou senha inválidos!' })
+    }
+
+    const token = servidor.jwt.sign({ id: usuario.id, nome: usuario.nome, email: usuario.email })
+
+    // exp vem em segundos dentro do token, o front usa em milissegundos
+    const expira = servidor.jwt.decode(token).exp * 1000
+
+    return reply.status(200).send({
+        message: 'Login realizado com sucesso!',
+        token: token,
+        expira: expira,
+        usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email }
+    })
+})
+// <<<
+
+// A resposta leva 3 coisas que o front vai guardar: token, expira (quando vence) e usuario (com o nome).
+
+
+// ### Passo 4: criptografar CPF e senha do barbeiro (critério 5.4)
+
+Volte nas rotas de barbeiro que você criou na Aula 3. Agora o POST e o PUT usam bcrypt.hash.
+Atenção no PUT: CPF e senha só são trocados se vierem preenchidos, porque na tela de edição
+o usuário não vê o valor antigo (ele está em hash).
+
+// >>> server.js
+servidor.post('/barbeiros', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.nome || !body.email || !body.cpf || !body.senha) {
+        return reply.status(400).send({ message: 'Nome, e-mail, CPF e senha são obrigatórios!' })
+    }
+
+    // LGPD: CPF e senha são salvos criptografados (hash bcrypt)
+    const cpfHash = await bcrypt.hash(body.cpf, 10)
+    const senhaHash = await bcrypt.hash(body.senha, 10)
+
+    await sql.query(
+        'INSERT INTO barbeiro (nome, email, cpf, senha, telefone) VALUES ($1, $2, $3, $4, $5)',
+        [body.nome, body.email, cpfHash, senhaHash, body.telefone]
+    )
+
+    return reply.status(201).send({ message: 'Barbeiro cadastrado!' })
+})
+// <<<
+
+// >>> server.js
+servidor.put('/barbeiros/:id', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+    const id = request.params.id
+
+    if (!body || !body.nome || !body.email) {
+        return reply.status(400).send({ message: 'Nome e e-mail são obrigatórios!' })
+    }
+
+    const barbeiro = await sql.query('SELECT * FROM barbeiro WHERE id = $1', [id])
+    if (barbeiro.rows.length === 0) {
+        return reply.status(404).send({ message: 'Barbeiro não existe!' })
+    }
+
+    await sql.query(
+        'UPDATE barbeiro SET nome = $1, email = $2, telefone = $3 WHERE id = $4',
+        [body.nome, body.email, body.telefone, id]
+    )
+
+    // CPF e senha só mudam se forem enviados (e continuam criptografados)
+    if (body.cpf) {
+        const cpfHash = await bcrypt.hash(body.cpf, 10)
+        await sql.query('UPDATE barbeiro SET cpf = $1 WHERE id = $2', [cpfHash, id])
+    }
+    if (body.senha) {
+        const senhaHash = await bcrypt.hash(body.senha, 10)
+        await sql.query('UPDATE barbeiro SET senha = $1 WHERE id = $2', [senhaHash, id])
+    }
+
+    return reply.status(200).send({ message: `Barbeiro ${body.nome} alterado!` })
+})
+// <<<
+
+// >>> server.js
+servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, reply) => {
+    const id = request.params.id
+    await sql.query('DELETE FROM barbeiro WHERE id = $1', [id])
+    return reply.status(200).send({ message: 'Barbeiro excluído!' })
+})
+// <<<
+
+// A listagem GET /barbeiros (com busca) está no arquivo #4_filtros_e_JOIN.txt.
+
+
+// ### Passo 5: os dados que você inseriu na Aula 2 precisam virar hash
+
+O login compara com bcrypt.compare. Se a senha do usuario no banco está em texto puro ("123"),
+o login SEMPRE falha. Troque pelos hashes. O jeito mais simples é no próprio SQL,
+usando a extensão pgcrypto do Postgres, que gera o mesmo tipo de hash do bcrypt:
+
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+    UPDATE usuario SET senha = crypt('123', gen_salt('bf'));
+    UPDATE barbeiro SET senha = crypt('123', gen_salt('bf')), cpf = crypt(cpf, gen_salt('bf'));
+
+    (gen_salt('bf') = bcrypt. Rode o UPDATE do barbeiro UMA vez só, senão faz hash do hash.)
+
+E no arquivo saep_db.sql, para ele continuar funcionando do zero, os INSERT ficam assim:
+
+    INSERT INTO usuario (nome, email, senha) VALUES
+    ('Marcos Coelho', 'marcos@barbearia.com', crypt('123', gen_salt('bf'))),
+    ('Paulo Souza',   'paulo@barbearia.com',  crypt('123', gen_salt('bf'))),
+    ('Ana Lima',      'ana@barbearia.com',    crypt('123', gen_salt('bf')));
+
+    INSERT INTO barbeiro (nome, email, cpf, senha, telefone) VALUES
+    ('Rafael Navalha', 'rafael@barbearia.com', crypt('111.222.333-44', gen_salt('bf')), crypt('123', gen_salt('bf')), '48999991111'),
+    ('Bruno Tesoura',  'bruno@barbearia.com',  crypt('222.333.444-55', gen_salt('bf')), crypt('123', gen_salt('bf')), '48999992222'),
+    ('Diego Fade',     'diego@barbearia.com',  crypt('333.444.555-66', gen_salt('bf')), crypt('123', gen_salt('bf')), '48999993333');
+
+(Os nomes e e-mails acima são só um exemplo. Use os dados que você mesmo inseriu.)
+
+Outro jeito, sem SQL: gerar o hash no terminal e colar no INSERT:
+
+    node -e "import('bcrypt').then(b => b.default.hash('123', 10)).then(console.log)"
+
+
+// ### Passo 6: testando no referencias.http
+
+@token = COLE_AQUI_O_TOKEN_DA_RESPOSTA_DO_LOGIN
+
+### Login certo
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{
+    "email": "marcos@barbearia.com",
+    "senha": "123"
+}
+
+### Login com senha errada (esperado: 401)
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{
+    "email": "marcos@barbearia.com",
+    "senha": "errada"
+}
+
+### Login sem dados (esperado: 400)
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{}
+
+### Rota protegida SEM token (esperado: 401)
+GET http://localhost:6767/barbeiros
+
+### Rota protegida COM token (esperado: 200)
+GET http://localhost:6767/barbeiros
+Authorization: Bearer {{token}}
+
+### Cadastrar barbeiro (confira no pgAdmin que cpf e senha ficaram em hash)
+POST http://localhost:6767/barbeiros
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Thiago Pente",
+    "email": "thiago@barbearia.com",
+    "cpf": "444.555.666-77",
+    "senha": "123",
+    "telefone": "48999994444"
+}
+
+
+// ### Erros comuns
+
+- "Illegal arguments: string, undefined" no bcrypt.compare: o body veio sem senha, ou a coluna senha
+  do usuario está vazia. Confira o JSON do .http e o SELECT no pgAdmin.
+- Login sempre dá 401 mesmo com a senha certa: a senha no banco está em texto puro (volte ao Passo 5).
+- "autenticar is not defined": a função autenticar precisa estar ANTES das rotas que a usam.
+- 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
+- No .http, DELETE e GET não levam Content-Type nem body.
+- O CPF não aparece na listagem: é de propósito, ele está em hash.

@@ -1,0 +1,347 @@
+// ### Introdução
+
+API serve para conectar no banco, o que usamos em aula foi a biblioteca do PG para integrar a api com o postgres.
+Usamos o PG Admin para gerenciar o postgres criando os bancos de dados e as tabelas no banco.
+
+// ### utilização do fastify para gerenciar o servidor e a comunicação com o http.
+// Quando vamos construir uma casa não precisamos criar os próprios tijólos nós compramos prontos e usamos.
+// O fastify é como a loja onde encontramos os meios para criar a casa sem precisar criar esses meios a cada projeto.
+
+import Fastify from 'fastify'
+const servidor = Fastify();
+
+// ### Como conectar a API no banco de dados:
+
+import { Pool } from 'pg' // importação da biblioteca de conexão com o postgress
+
+const sql = new Pool({
+    user: "postgres", // usuario padrão do postgres mas da pra criar outro usuario se quiser
+    password: "senai", // senha do banco
+    host: "localhost", // ip da sua máquina
+    port: 5432,  // porta que o banco está rodando normalmente é 5432
+    database: "receitas" // Nome do banco de dados
+})
+// OBS: Essa variável chamada sql será usada para conectar a api ao banco de dados dessa forma:  
+// sql.query( 'aqui vai a query SQL' , [ 'Aqui vão ficar os valores que serão usados dentro da query' ] ) 
+
+// exemplo:
+
+await sql.query('DELETE FROM usuario where id = $1', [id]) 
+
+// $1 é o valor da variável id que está no array de dependencias.
+
+// OUTRO EXEMPLO:
+
+await sql.query('INSERT INTO usuario (nome, senha, email) VALUES ($1, $2, $3)', [body.nome, body.senha, body.email])  
+
+// podem ter outros elementos no array de dependencias 
+
+// $1 vai receber o valor de body.nome,
+// $2 vai receber o valor de body.senha,
+// $3 vai receber o valor de body.email
+
+// isso é necessário para evitar SQL injection
+
+// ### REQUISIÇÕES HTTP
+
+// Toda requisição tem um método então GET, POST, PUT, PATCH ou DELETE.
+// Toda requisição tem um nome de endpoint por exemplo /login.
+// Quando fazemos requisições alguns métodos podem ter um body também conhecido como payload.
+// As requisições tem um header, normalmente usamos o Content-Type: application/json para enviar json no body.
+// O método post, put e patch podem ter um body.
+
+// ### GET
+
+// Quando vamos buscar algo no servidor usamos o metodo get o endpoint abaixo retorna todos os registros da tabela.
+
+// reply é usado para enviar uma resposta personalizada
+
+// onde está '/usuarios' é o nome do endpoint precisa estar igual na documentação
+// por exemplo GET http://localhost:6767/usuarios 
+servidor.get('/usuarios', async (request, reply) => {
+
+    // usuario é o nome da tabela nesse exemplo
+    const usuarios = await sql.query('select * from usuario')
+    
+    // usuarios é uma variável criada que recebe tudo que veio da tabela usuario
+    // usuarios.rows é para retornar somente as linhas da tabela
+    reply.send(usuarios.rows)
+})
+
+// ### POST
+
+// request é onde ficam as informações que vieram na requisição como o body
+
+// Cadastrando usuarrios
+servidor.post('/usuarios', async (request, reply) => {
+// pegando as informações que vieram do body da requisição
+const body = request.body
+
+// validando informações que devem vir no body
+
+    if (!body || !body.nome || !body.email || !body.cpf || !body.senha) {
+        return reply.status(400).send({ message: "nome, email, cpf e senha são obrigatórios!" })
+    }
+
+    // insert na tabela através da api de acordo com as informações que vieram do body
+
+    const resultado = await sql.query(
+        'INSERT INTO usuario (nome, email, cpf, senha, telefone) VALUES ($1, $2, $3, $4, $5)',
+        [body.nome, body.email, body.cpf, body.senha, body.telefone]
+    )
+
+    reply.status(201).send({ message: "usuario cadastrado!" })
+})
+
+
+// ### PUT
+
+// put é usado para alterar algo no servidor então é necessário enviar na requisição o id e o body.
+
+// o id é o que será editado e o body é o que será inserido no lugar.
+// normalmente enviamos o id na propria url da requisição por isso :id
+
+servidor.put('/usuarios/:id', async (request, reply) => {
+    const body = request.body;
+    const id = request.params.id;
+
+    if (!body || !body.nome || !body.senha || !body.email) {
+        return reply.status(400).send({
+            message: "nome, email e senha são obrigatórios!"
+        })
+    } else if (!id) {
+        return reply.status(400).send({
+            message: "Faltou o ID!"
+        })
+    }
+
+    const usuario = await sql.query('select * from usuario where id = $1', [id])  
+    if (usuario.rows.length === 0) {
+        return reply.status(400).send({
+            message: "Usuário não existe!"
+        })
+    }
+
+    const resultado = await sql.query('UPDATE usuario SET nome = $1, senha = $2, email = $4 WHERE id = $3', [body.nome, body.senha, id, body.email])      
+    reply.status(201).send({message: `usuario ${body.nome} alterado!`})          
+})
+
+// ### DELETE
+
+// é necessário enviar para o servidor o id de qual registro será deletado.
+// normalmente enviamos o id na propria url da requisição por isso :id
+
+servidor.delete('/usuarios/:id', async (request, reply) => {
+    const id = request.params.id
+    const resultado = await sql.query('DELETE FROM usuario where id = $1', [id]) 
+    console.log(resultado);    
+    reply.status(200).send({message:'Usuário Deletado!'})
+})
+
+// ### Listen
+
+// é necessário definir a porta que a api vai rodar no caso 6767
+// Esse código normalmente fica no final do arquivo server.js 
+
+servidor.listen({   
+    port: 6767
+})
+
+
+// ### Testando a API com REST Client (referencias.http)
+
+O REST Client é uma extensão do VS Code que permite testar as rotas da API direto no editor, sem precisar de programas como Postman ou Insomnia. Criamos um arquivo chamado `referencias.http` na raiz do projeto.
+
+// Regras do arquivo .http:
+// 1. Usamos três hashtags '###' para separar uma requisição da outra.
+// 2. Primeira linha: Método HTTP + URL completa (ex: POST http://localhost:6767/login).
+// 3. Headers: Ficam logo abaixo da URL. Usamos 'Content-Type: application/json' para avisar que o body está em JSON.
+// 4. Linha em branco: É OBRIGATÓRIO dar 1 espaço (linha em branco) entre os Headers e o Body, senão a requisição dá erro.
+// 5. Body (Payload): É o JSON enviado para o servidor nos métodos POST, PUT ou PATCH.
+
+// ### Exemplos para o arquivo referencias.http:
+
+### Buscar todos os usuários (GET)
+
+GET http://localhost:6767/usuarios
+
+
+### Fazer Login (POST)
+
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{
+    "email": "marcos@email.com",
+    "senha": "senai"
+}
+
+
+### Atualizar um usuário por ID (PUT)
+
+PUT http://localhost:6767/usuarios/1
+Content-Type: application/json
+
+{
+    "nome": "Marcos Vinicius",
+    "email": "marcos@email.com",
+    "senha": "123"
+}
+
+
+### Deletar um usuário por ID (DELETE)
+
+DELETE http://localhost:6767/usuarios/1
+// ======================================================================
+// ### ATENÇÃO NA PROVA: ajuste a conexão e a porta
+// ======================================================================
+// Os exemplos acima usam o banco "receitas" e a porta 6767. Na prova:
+//  - database: "saep_db"  (o banco que você cria no pgAdmin com CREATE DATABASE saep_db;)
+//  - user e password: os do Postgres da SUA máquina (se o login falhar, confira no pgAdmin)
+//  - port do banco: normalmente 5432 (confira em Propriedades do servidor no pgAdmin)
+//  - port da API: use SEMPRE a mesma (6767) no servidor.listen, no referencias.http e na const API do front
+
+
+// ======================================================================
+// ### EXTRA 1: Busca por termo (request.query)
+// ======================================================================
+// Tudo que vem depois do ? na URL chega em request.query:
+//   GET http://localhost:6767/usuarios?busca=carlos    ->   request.query.busca === 'carlos'
+// Se não vier nada, request.query.busca é undefined e listamos todos.
+// O valor do $1 leva um % de cada lado: '%carlos%' (qualquer texto antes e depois).
+
+// >>> syntax
+servidor.get('/usuarios', async (request, reply) => {
+    const busca = request.query.busca
+
+    if (busca) {
+        const usuarios = await sql.query(
+            'SELECT id, nome, email FROM usuario WHERE nome ILIKE $1 OR email ILIKE $1 ORDER BY id',
+            [`%${busca}%`]
+        )
+        return reply.send(usuarios.rows)
+    }
+
+    const usuarios = await sql.query('SELECT id, nome, email FROM usuario ORDER BY id')
+    reply.send(usuarios.rows)
+})
+// <<<
+
+### Testar a busca
+GET http://localhost:6767/usuarios?busca=carlos
+
+
+// ======================================================================
+// ### EXTRA 2: GET com JOIN (juntando tabelas)
+// ======================================================================
+// O SQL do JOIN está no SQL.txt. Na API é só colocar esse SQL dentro do sql.query.
+// Use crase ( ` ) para o SQL poder ficar em várias linhas e use AS para dar apelido às colunas.
+
+// >>> syntax
+servidor.get('/reunioes', async (request, reply) => {
+    const reunioes = await sql.query(`
+        SELECT
+            reuniao.id,
+            reuniao.assunto,
+            reuniao.data_reuniao,
+            usuario.nome AS organizador,
+            sala.nome AS sala_reservada
+        FROM reuniao
+        INNER JOIN usuario ON reuniao.usuario_id = usuario.id
+        INNER JOIN sala ON reuniao.sala_id = sala.id
+        ORDER BY reuniao.data_reuniao ASC
+    `)
+    reply.send(reunioes.rows)
+})
+// <<<
+
+### Testar o JOIN
+GET http://localhost:6767/reunioes
+
+
+// ======================================================================
+// ### EXTRA 3: POST que depende de outra tabela (chave estrangeira)
+// ======================================================================
+// A sala pertence a um usuário (sala.usuario_id). Antes de gravar, confira se o usuário existe.
+// Sem essa conferência, um id que não existe faz o Postgres dar erro e a API responde 500.
+
+// >>> syntax
+servidor.post('/salas', async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.nome || !body.bloco || !body.capacidade || !body.usuario_id) {
+        return reply.status(400).send({ message: 'nome, bloco, capacidade e usuario_id são obrigatórios!' })
+    }
+
+    const usuario = await sql.query('SELECT id FROM usuario WHERE id = $1', [body.usuario_id])
+    if (usuario.rows.length === 0) {
+        return reply.status(400).send({ message: 'Usuário informado não existe!' })
+    }
+
+    await sql.query(
+        'INSERT INTO sala (nome, bloco, capacidade, usuario_id) VALUES ($1, $2, $3, $4)',
+        [body.nome, body.bloco, body.capacidade, body.usuario_id]
+    )
+
+    reply.status(201).send({ message: 'Sala cadastrada!' })
+})
+// <<<
+
+### Testar
+POST http://localhost:6767/salas
+Content-Type: application/json
+
+{
+    "nome": "Sala 04",
+    "bloco": "Bloco A",
+    "capacidade": 12,
+    "usuario_id": 1
+}
+
+
+// ======================================================================
+// ### EXTRA 4: PUT que altera só UM campo (ex: só a data)
+// ======================================================================
+// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe.
+// SEMPRE use WHERE no UPDATE. Sem o WHERE, TODAS as linhas mudam.
+
+// >>> syntax
+servidor.put('/reunioes/:id', async (request, reply) => {
+    const body = request.body
+    const id = request.params.id
+
+    if (!body || !body.data_reuniao) {
+        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
+    }
+
+    const resultado = await sql.query(
+        'UPDATE reuniao SET data_reuniao = $1 WHERE id = $2',
+        [body.data_reuniao, id]
+    )
+
+    if (resultado.rowCount === 0) {
+        return reply.status(404).send({ message: 'Reunião não existe!' })
+    }
+
+    reply.status(200).send({ message: 'Data da reunião atualizada!' })
+})
+// <<<
+
+### Testar (a data vai no formato 2026-11-18T14:30)
+PUT http://localhost:6767/reunioes/1
+Content-Type: application/json
+
+{
+    "data_reuniao": "2026-11-18T14:30"
+}
+
+
+// ======================================================================
+// ### Status HTTP que usamos
+// ======================================================================
+//  200  deu certo (listar, editar, excluir)
+//  201  criado (cadastrar)
+//  400  faltou dado ou dado inválido
+//  401  não autenticado (login errado, token vencido)
+//  404  o registro não existe
+//  500  erro no servidor (veja a mensagem no terminal onde roda o npm start)

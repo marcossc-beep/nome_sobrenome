@@ -1,0 +1,184 @@
+// ### Introdução a Banco de Dados Relacional
+
+Um banco de dados relacional é organizado em tabelas conectadas entre si por chaves (IDs).
+Para entender como as informações ficam guardadas:
+
+- Tabela: É como uma aba de planilha (ex: Tabela "usuario", Tabela "sala", Tabela "reuniao").
+- Colunas (Campos): Definem o tipo de informação salva (ex: nome, email, cpf, data).
+- Linhas (Registros/Tuplas): São os dados cadastrados (ex: Linha 1 possui o usuário "Carlos", email "carlos@email.com").
+
+O SQL (Structured Query Language) é a linguagem que usamos para criar as tabelas, inserir, atualizar, consultar e deletar registros no PostgreSQL via PGAdmin.
+
+
+// ### Tipos de Dados Mais Utilizados
+
+- SERIAL: Cria um número inteiro sequencial automático (1, 2, 3...) a cada cadastro. Usado para a Chave Primária (id).
+- VARCHAR(100): Texto com limite fixo de caracteres. Ideal para nomes, emails, CPF, senhas e telefones.
+- TEXT: Texto longo sem limite rígido. Ideal para observações, pautas e descrições.
+- INTEGER / INT: Números inteiros sem casas decimais (ex: número do bloco, capacidade, chaves estrangeiras).
+- TIMESTAMP: Armazena data e hora juntas (ex: 2026-10-15 14:30:00).
+- BOOLEAN: Valor verdadeiro ou falso (true/false).
+
+
+// ### Regras e Restrições (Constraints)
+
+- PRIMARY KEY: Identificador único da linha. Não pode se repetir nem ser nulo (é o "CPF" daquela linha).
+- NOT NULL: Torna o preenchimento da coluna obrigatório.
+- UNIQUE: Impede que existam dois registros com o mesmo valor (ex: dois usuários com o mesmo e-mail).
+- REFERENCES tabela(id): Cria a Chave Estrangeira (Foreign Key / FK), vinculando o registro atual ao ID de outra tabela.
+- ON DELETE CASCADE: Se o registro pai for deletado, todos os registros filhos ligados a ele serão apagados automaticamente.
+
+
+// ### Estrutura de Criação de Tabelas (DDL para Prova Prática)
+
+Para garantir a pontuação no banco de dados, o script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
+
+-- 1. Tabela Base: USUARIO (Não depende de nenhuma outra tabela)
+CREATE TABLE usuario (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    cpf VARCHAR(20) NOT NULL,
+    senha VARCHAR(100) NOT NULL,
+    telefone VARCHAR(20)
+);
+
+-- 2. Tabela Secundária: SALA (Possui vinculo com quem é o responsável/criador)
+CREATE TABLE sala (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    bloco VARCHAR(50) NOT NULL,
+    capacidade INT NOT NULL,
+    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE
+);
+
+-- 3. Tabela Principal/Relacionamento: REUNIAO (Vincula Usuário e Sala)
+CREATE TABLE reuniao (
+    id SERIAL PRIMARY KEY,
+    assunto VARCHAR(150) NOT NULL,
+    data_reuniao TIMESTAMP NOT NULL,
+    observacao TEXT,
+    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
+    sala_id INT NOT NULL REFERENCES sala(id) ON DELETE CASCADE
+);
+
+
+// ### População Inicial do Banco (REQUISITO DA PROVA: Mínimo 3 registros por tabela)
+
+É obrigatório inserir no mínimo 3 registros em TODAS as tabelas criadas no script `.sql`, respeitando a ordem das chaves estrangeiras.
+
+-- Inserindo 3 Usuários
+INSERT INTO usuario (nome, email, cpf, senha, telefone) VALUES
+('Carlos Silva', 'carlos@email.com', '111.222.333-44', 'senha123', '48999991111'),
+('Ana Souza', 'ana@email.com', '222.333.444-55', 'senha456', '48999992222'),
+('Marcos Oliveira', 'marcos@email.com', '333.444.555-66', 'senha789', '48999993333');
+
+-- Inserindo 3 Salas (vinculadas aos IDs de usuário 1, 2 e 3)
+INSERT INTO sala (nome, bloco, capacidade, usuario_id) VALUES
+('Auditório Principal', 'Bloco A', 50, 1),
+('Laboratório de Inovação', 'Bloco B', 20, 2),
+('Sala de Reuniões 01', 'Bloco C', 10, 3);
+
+-- Inserindo 3 Reuniões (vinculadas aos usuários e salas correspondentes)
+INSERT INTO reuniao (assunto, data_reuniao, observacao, usuario_id, sala_id) VALUES
+('Ainhamento do Projeto A', '2026-10-10 14:00:00', 'Discutir cronograma das entregas', 1, 1),
+('Revisão do Orçamento', '2026-10-11 10:30:00', 'Apresentação da planilha de custos', 2, 2),
+('Planejamento Semestral', '2026-10-12 16:00:00', 'Definição de metas', 3, 3);
+
+
+// ### Comandos de Manipulação de Dados (DML)
+
+// 1. SELECT (Buscar / Ler dados)
+
+-- Buscar todos os campos de todos os usuários
+SELECT * FROM usuario;
+
+-- Buscar apenas nome e email
+SELECT nome, email FROM usuario;
+
+-- Filtrar busca por ID
+SELECT * FROM usuario WHERE id = 1;
+
+-- Busca por termo utilizando filtro parcial (LOWER e ILIKE ignoram maiúsculas/minúsculas)
+-- Este é o padrão SQL utilizado na rota GET com filtro da API:
+SELECT * FROM usuario 
+WHERE LOWER(nome) LIKE LOWER('%carlos%') OR LOWER(email) LIKE LOWER('%carlos%') 
+ORDER BY id ASC;
+
+
+// 2. UPDATE (Atualizar / Alterar dados)
+// ATENÇÃO: Nunca execute UPDATE sem a cláusula WHERE! Se esquecer o WHERE, alterará a tabela toda.
+
+-- Atualizando dados de um usuário pelo ID
+UPDATE usuario 
+SET nome = 'Carlos Silva Alterado', email = 'carlos.novo@email.com', senha = 'novasenha123' 
+WHERE id = 1;
+
+
+// 3. DELETE (Deletar / Remover dados)
+// ATENÇÃO: Nunca execute DELETE sem a cláusula WHERE!
+
+-- Deletando um registro específico pelo ID
+DELETE FROM usuario WHERE id = 1;
+-- OBS: Por causa do ON DELETE CASCADE, as salas e reuniões associadas a este usuario_id serão excluídas automaticamente.
+
+
+// ### Consultas com Junção de Tabelas (INNER JOIN)
+
+O INNER JOIN serve para relacionar e exibir na mesma consulta dados que estão divididos em tabelas diferentes através da Chave Estrangeira.
+
+// 1) JOIN Simples entre 2 Tabelas (Sala + Usuário Responsável):
+
+SELECT 
+    sala.id AS id_sala,
+    sala.nome AS nome_sala,
+    sala.bloco,
+    sala.capacidade,
+    usuario.nome AS responsavel_sala,
+    usuario.email AS email_responsavel
+FROM sala
+INNER JOIN usuario ON sala.usuario_id = usuario.id;
+
+
+// 2) JOIN Triplo entre 3 Tabelas Encadeadas (Reunião + Usuário Organizador + Sala):
+
+SELECT 
+    reuniao.id AS id_reuniao,
+    reuniao.assunto,
+    reuniao.data_reuniao,
+    reuniao.observacao,
+    usuario.nome AS organizador,
+    usuario.email AS email_organizador,
+    sala.nome AS sala_reservada,
+    sala.bloco
+FROM reuniao
+INNER JOIN usuario ON reuniao.usuario_id = usuario.id
+INNER JOIN sala ON reuniao.sala_id = sala.id
+ORDER BY reuniao.data_reuniao ASC;
+// ======================================================================
+// ### Salvando o script: saep_db.sql (ENTREGA 3 da prova)
+// ======================================================================
+// O que vale na prova é o ARQUIVO saep_db.sql, não só ter rodado os comandos no pgAdmin.
+//  1. Escreva os CREATE TABLE e depois os INSERT no arquivo saep_db.sql (da raiz do projeto, no VS Code).
+//  2. Para testar: copie o conteúdo para o Query Tool do pgAdmin, DENTRO do banco saep_db, e execute.
+//  3. Teste o script do zero: apague as tabelas e rode de novo.
+//
+//     DROP TABLE IF EXISTS agendamento, cliente, barbeiro, usuario;
+//
+//     (use os nomes das SUAS tabelas. Com todas no mesmo DROP o Postgres apaga na ordem certa sozinho)
+//
+// Banco: crie no pgAdmin com   CREATE DATABASE saep_db;   e abra o Query Tool dentro dele.
+// Erros comuns:
+//  - "relation ... does not exist": criou as tabelas fora do banco saep_db, ou na ordem errada.
+//  - "violates foreign key constraint": INSERT com uma chave estrangeira que não existe (ex: barbeiro_id = 9).
+//  - "duplicate key value violates unique constraint": rodou os INSERT duas vezes (email UNIQUE repetido).
+
+
+// ======================================================================
+// ### Gerando o DER no pgAdmin (ENTREGA 2 da prova: der.png)
+// ======================================================================
+//  1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
+//  2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
+//  3. O diagrama mostra as tabelas e as setas das chaves estrangeiras. Confira se todas as tabelas aparecem.
+//  4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
+//  5. Renomeie para der.png e coloque na raiz do projeto (a prova aceita der.png ou der.pdf).
