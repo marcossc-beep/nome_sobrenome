@@ -19,26 +19,27 @@ const sql = new Pool({
     password: "senai", // senha do banco
     host: "localhost", // ip da sua máquina
     port: 5432,  // porta que o banco está rodando normalmente é 5432
-    database: "receitas" // Nome do banco de dados
+    database: "saep_db" // Nome do banco de dados
 })
+// OBS na prova: o banco é o saep_db (criado no pgAdmin) e usuário, senha e porta são os do Postgres da sua máquina.
 // OBS: Essa variável chamada sql será usada para conectar a api ao banco de dados dessa forma:  
 // sql.query( 'aqui vai a query SQL' , [ 'Aqui vão ficar os valores que serão usados dentro da query' ] ) 
 
 // exemplo:
 
-await sql.query('DELETE FROM usuario where id = $1', [id]) 
+// await sql.query('DELETE FROM usuario where id = $1', [id]) 
 
 // $1 é o valor da variável id que está no array de dependencias.
 
 // OUTRO EXEMPLO:
 
-await sql.query('INSERT INTO usuario (nome, senha, email) VALUES ($1, $2, $3)', [body.nome, body.senha, body.email])  
+// await sql.query('INSERT INTO usuario (nome, cpf, senha) VALUES ($1, $2, $3)', [body.nome, body.cpf, body.senha])  
 
 // podem ter outros elementos no array de dependencias 
 
 // $1 vai receber o valor de body.nome,
-// $2 vai receber o valor de body.senha,
-// $3 vai receber o valor de body.email
+// $2 vai receber o valor de body.cpf,
+// $3 vai receber o valor de body.senha
 
 // isso é necessário para evitar SQL injection
 
@@ -68,31 +69,98 @@ servidor.get('/usuarios', async (request, reply) => {
     reply.send(usuarios.rows)
 })
 
+// ### GET com busca por termo (query params)
+
+// Tudo que vem depois do ? na URL chega em request.query:
+// GET http://localhost:6767/usuarios?busca=ana  ->  request.query.busca === 'ana'
+// Se não vier nada, request.query.busca é undefined e a rota lista todos.
+
+// Use este GET no lugar do GET simples de cima (duas rotas iguais dão erro no Fastify).
+// O SQL com ILIKE está no SQL.txt: ele ignora maiúsculas/minúsculas e o % vale por "qualquer texto antes ou depois".
+// Repare que a senha não é pedida no SELECT: não devolvemos o que não precisa aparecer.
+
+servidor.get('/usuarios', async (request, reply) => {
+    const busca = request.query.busca
+
+    if (busca) {
+        const usuarios = await sql.query(
+            'SELECT id, nome, cpf FROM usuario WHERE nome ILIKE $1 ORDER BY id',
+            [`%${busca}%`]
+        )
+        return reply.send(usuarios.rows)
+    }
+
+    const usuarios = await sql.query('SELECT id, nome, cpf FROM usuario ORDER BY id')
+    reply.send(usuarios.rows)
+})
+
+// ### GET com JOIN (juntando tabelas)
+
+// O SQL do JOIN está no SQL.txt. Na API é só colocar o mesmo SQL dentro do sql.query.
+// Entre crases ( ` ) o SQL pode ficar em várias linhas. Use AS para dar apelido às colunas
+// e ORDER BY para ordenar (aqui, pela data da reunião).
+
+servidor.get('/reunioes', async (request, reply) => {
+    const reunioes = await sql.query(`
+        SELECT
+            reuniao.id,
+            reuniao.data_hora,
+            usuario.nome AS organizador,
+            sala.nome AS sala_reservada,
+            sala.bloco
+        FROM reuniao
+        INNER JOIN usuario ON reuniao.usuario_id = usuario.id
+        INNER JOIN sala ON reuniao.sala_id = sala.id
+        ORDER BY reuniao.data_hora ASC
+    `)
+    reply.send(reunioes.rows)
+})
+
 // ### POST
 
 // request é onde ficam as informações que vieram na requisição como o body
 
 // Cadastrando usuarrios
 servidor.post('/usuarios', async (request, reply) => {
-// pegando as informações que vieram do body da requisição
-const body = request.body
-
-// validando informações que devem vir no body
-
-    if (!body || !body.nome || !body.email || !body.cpf || !body.senha) {
-        return reply.status(400).send({ message: "nome, email, cpf e senha são obrigatórios!" })
-    }
+    // pegando as informações que vieram do body da requisição
+    const body = request.body
 
     // insert na tabela através da api de acordo com as informações que vieram do body
 
     const resultado = await sql.query(
-        'INSERT INTO usuario (nome, email, cpf, senha, telefone) VALUES ($1, $2, $3, $4, $5)',
-        [body.nome, body.email, body.cpf, body.senha, body.telefone]
+        'INSERT INTO usuario (nome, cpf, senha) VALUES ($1, $2, $3)',
+        [body.nome, body.cpf, body.senha]
     )
 
     reply.status(201).send({ message: "usuario cadastrado!" })
 })
 
+
+// ### POST que depende de outra tabela (chave estrangeira)
+
+// A sala pertence a um usuário (sala.usuario_id). Antes de gravar, conferimos se o usuário existe.
+// Sem essa conferência, um id que não existe faz o Postgres dar erro e a API responde 500.
+// A reunião tem duas chaves estrangeiras (usuario_id e sala_id): é a mesma ideia, conferindo as duas.
+
+servidor.post('/salas', async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.nome || !body.bloco || !body.usuario_id) {
+        return reply.status(400).send({ message: "nome, bloco e usuario_id são obrigatórios!" })
+    }
+
+    const usuario = await sql.query('SELECT id FROM usuario WHERE id = $1', [body.usuario_id])
+    if (usuario.rows.length === 0) {
+        return reply.status(400).send({ message: "Usuário informado não existe!" })
+    }
+
+    await sql.query(
+        'INSERT INTO sala (nome, bloco, usuario_id) VALUES ($1, $2, $3)',
+        [body.nome, body.bloco, body.usuario_id]
+    )
+
+    reply.status(201).send({ message: "Sala cadastrada!" })
+})
 
 // ### PUT
 
@@ -105,9 +173,9 @@ servidor.put('/usuarios/:id', async (request, reply) => {
     const body = request.body;
     const id = request.params.id;
 
-    if (!body || !body.nome || !body.senha || !body.email) {
+    if (!body || !body.nome || !body.cpf || !body.senha) {
         return reply.status(400).send({
-            message: "nome, email e senha são obrigatórios!"
+            message: "nome, cpf e senha são obrigatórios!"
         })
     } else if (!id) {
         return reply.status(400).send({
@@ -122,8 +190,34 @@ servidor.put('/usuarios/:id', async (request, reply) => {
         })
     }
 
-    const resultado = await sql.query('UPDATE usuario SET nome = $1, senha = $2, email = $4 WHERE id = $3', [body.nome, body.senha, id, body.email])      
+    const resultado = await sql.query('UPDATE usuario SET nome = $1, cpf = $2, senha = $3 WHERE id = $4', [body.nome, body.cpf, body.senha, id])      
     reply.status(201).send({message: `usuario ${body.nome} alterado!`})          
+})
+
+// ### PUT que altera só um campo (ex: só a data)
+
+// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe (404).
+// Sempre use WHERE no UPDATE. Sem o WHERE, todas as linhas da tabela mudam.
+// A data vai no formato 2026-12-20T09:00 (o mesmo que o input datetime-local do HTML devolve).
+
+servidor.put('/reunioes/:id', async (request, reply) => {
+    const body = request.body
+    const id = request.params.id
+
+    if (!body || !body.data_hora) {
+        return reply.status(400).send({ message: "A nova data é obrigatória!" })
+    }
+
+    const resultado = await sql.query(
+        'UPDATE reuniao SET data_hora = $1 WHERE id = $2',
+        [body.data_hora, id]
+    )
+
+    if (resultado.rowCount === 0) {
+        return reply.status(404).send({ message: "Reunião não existe!" })
+    }
+
+    reply.status(200).send({ message: "Data da reunião atualizada!" })
 })
 
 // ### DELETE
@@ -166,14 +260,26 @@ O REST Client é uma extensão do VS Code que permite testar as rotas da API dir
 GET http://localhost:6767/usuarios
 
 
+### Cadastrar um usuário (POST)
+
+POST http://localhost:6767/usuarios
+Content-Type: application/json
+
+{
+    "nome": "Carlos Dias",
+    "cpf": "777.888.999-00",
+    "senha": "senha000"
+}
+
+
 ### Fazer Login (POST)
 
 POST http://localhost:6767/login
 Content-Type: application/json
 
 {
-    "email": "marcos@email.com",
-    "senha": "senai"
+    "cpf": "444.555.666-77",
+    "senha": "senha123"
 }
 
 
@@ -183,165 +289,54 @@ PUT http://localhost:6767/usuarios/1
 Content-Type: application/json
 
 {
-    "nome": "Marcos Vinicius",
-    "email": "marcos@email.com",
-    "senha": "123"
+    "nome": "Beatriz Lima Souza",
+    "cpf": "444.555.666-77",
+    "senha": "senha123"
 }
 
 
 ### Deletar um usuário por ID (DELETE)
 
 DELETE http://localhost:6767/usuarios/1
-// ======================================================================
-// ### ATENÇÃO NA PROVA: ajuste a conexão e a porta
-// ======================================================================
-// Os exemplos acima usam o banco "receitas" e a porta 6767. Na prova:
-//  - database: "saep_db"  (o banco que você cria no pgAdmin com CREATE DATABASE saep_db;)
-//  - user e password: os do Postgres da SUA máquina (se o login falhar, confira no pgAdmin)
-//  - port do banco: normalmente 5432 (confira em Propriedades do servidor no pgAdmin)
-//  - port da API: use SEMPRE a mesma (6767) no servidor.listen, no referencias.http e na const API do front
 
 
-// ======================================================================
-// ### EXTRA 1: Busca por termo (request.query)
-// ======================================================================
-// Tudo que vem depois do ? na URL chega em request.query:
-//   GET http://localhost:6767/usuarios?busca=carlos    ->   request.query.busca === 'carlos'
-// Se não vier nada, request.query.busca é undefined e listamos todos.
-// O valor do $1 leva um % de cada lado: '%carlos%' (qualquer texto antes e depois).
+### Buscar usuários por termo (GET com ?busca=)
 
-// >>> syntax
-servidor.get('/usuarios', async (request, reply) => {
-    const busca = request.query.busca
-
-    if (busca) {
-        const usuarios = await sql.query(
-            'SELECT id, nome, email FROM usuario WHERE nome ILIKE $1 OR email ILIKE $1 ORDER BY id',
-            [`%${busca}%`]
-        )
-        return reply.send(usuarios.rows)
-    }
-
-    const usuarios = await sql.query('SELECT id, nome, email FROM usuario ORDER BY id')
-    reply.send(usuarios.rows)
-})
-// <<<
-
-### Testar a busca
-GET http://localhost:6767/usuarios?busca=carlos
+GET http://localhost:6767/usuarios?busca=ana
 
 
-// ======================================================================
-// ### EXTRA 2: GET com JOIN (juntando tabelas)
-// ======================================================================
-// O SQL do JOIN está no SQL.txt. Na API é só colocar esse SQL dentro do sql.query.
-// Use crase ( ` ) para o SQL poder ficar em várias linhas e use AS para dar apelido às colunas.
+### Listar as reuniões com JOIN, ordenadas por data (GET)
 
-// >>> syntax
-servidor.get('/reunioes', async (request, reply) => {
-    const reunioes = await sql.query(`
-        SELECT
-            reuniao.id,
-            reuniao.assunto,
-            reuniao.data_reuniao,
-            usuario.nome AS organizador,
-            sala.nome AS sala_reservada
-        FROM reuniao
-        INNER JOIN usuario ON reuniao.usuario_id = usuario.id
-        INNER JOIN sala ON reuniao.sala_id = sala.id
-        ORDER BY reuniao.data_reuniao ASC
-    `)
-    reply.send(reunioes.rows)
-})
-// <<<
-
-### Testar o JOIN
 GET http://localhost:6767/reunioes
 
 
-// ======================================================================
-// ### EXTRA 3: POST que depende de outra tabela (chave estrangeira)
-// ======================================================================
-// A sala pertence a um usuário (sala.usuario_id). Antes de gravar, confira se o usuário existe.
-// Sem essa conferência, um id que não existe faz o Postgres dar erro e a API responde 500.
+### Cadastrar uma sala ligada a um usuário (POST com chave estrangeira)
 
-// >>> syntax
-servidor.post('/salas', async (request, reply) => {
-    const body = request.body
-
-    if (!body || !body.nome || !body.bloco || !body.capacidade || !body.usuario_id) {
-        return reply.status(400).send({ message: 'nome, bloco, capacidade e usuario_id são obrigatórios!' })
-    }
-
-    const usuario = await sql.query('SELECT id FROM usuario WHERE id = $1', [body.usuario_id])
-    if (usuario.rows.length === 0) {
-        return reply.status(400).send({ message: 'Usuário informado não existe!' })
-    }
-
-    await sql.query(
-        'INSERT INTO sala (nome, bloco, capacidade, usuario_id) VALUES ($1, $2, $3, $4)',
-        [body.nome, body.bloco, body.capacidade, body.usuario_id]
-    )
-
-    reply.status(201).send({ message: 'Sala cadastrada!' })
-})
-// <<<
-
-### Testar
 POST http://localhost:6767/salas
 Content-Type: application/json
 
 {
     "nome": "Sala 04",
     "bloco": "Bloco A",
-    "capacidade": 12,
     "usuario_id": 1
 }
 
 
-// ======================================================================
-// ### EXTRA 4: PUT que altera só UM campo (ex: só a data)
-// ======================================================================
-// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe.
-// SEMPRE use WHERE no UPDATE. Sem o WHERE, TODAS as linhas mudam.
+### Atualizar só a data de uma reunião (PUT)
 
-// >>> syntax
-servidor.put('/reunioes/:id', async (request, reply) => {
-    const body = request.body
-    const id = request.params.id
-
-    if (!body || !body.data_reuniao) {
-        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
-    }
-
-    const resultado = await sql.query(
-        'UPDATE reuniao SET data_reuniao = $1 WHERE id = $2',
-        [body.data_reuniao, id]
-    )
-
-    if (resultado.rowCount === 0) {
-        return reply.status(404).send({ message: 'Reunião não existe!' })
-    }
-
-    reply.status(200).send({ message: 'Data da reunião atualizada!' })
-})
-// <<<
-
-### Testar (a data vai no formato 2026-11-18T14:30)
 PUT http://localhost:6767/reunioes/1
 Content-Type: application/json
 
 {
-    "data_reuniao": "2026-11-18T14:30"
+    "data_hora": "2026-12-20T09:00"
 }
 
 
-// ======================================================================
 // ### Status HTTP que usamos
-// ======================================================================
-//  200  deu certo (listar, editar, excluir)
-//  201  criado (cadastrar)
-//  400  faltou dado ou dado inválido
-//  401  não autenticado (login errado, token vencido)
-//  404  o registro não existe
-//  500  erro no servidor (veja a mensagem no terminal onde roda o npm start)
+
+// 200  deu certo
+// 201  criado (cadastrar)
+// 400  faltou dado ou dado inválido
+// 401  não autenticado (login errado, token vencido)
+// 404  o registro não existe
+// 500  erro no servidor (veja a mensagem no terminal onde roda o npm start)

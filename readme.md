@@ -26,20 +26,22 @@ A pasta node_modules já está pronta, não precisa rodar npm install.
 
 ## Qual documentação usar em cada etapa
 
-Documentação Simplificada é o básico (banco e API). Documentação Completa é o resto (segurança e telas).
+Documentação Simplificada é o básico para fazer o banco e o CRUD da API.
+Documentação Completa vai mais a fundo e tem duas pastas: backend (banco, API, login e segurança) e frontend (as telas).
+Quem vai fazer só o front-end usa a pasta frontend (a API precisa estar rodando).
 Em cada arquivo, as linhas `// >>>` e `// <<<` só marcam onde o código começa e termina. Não copie essas linhas.
 
 | Etapa | Arquivos |
 |---|---|
 | Ler a prova, Anexo 1, entregas e .zip | Simplificada / ANEXO1_E_ENTREGAS.txt |
-| Banco: tabelas, inserts, DER, saep_db.sql | Simplificada / SQL.txt |
+| Banco: tabelas, inserts, DER, saep_db.sql | Simplificada / SQL.txt (resumo) e Completa / backend / #0_SQL.txt (passo a passo) |
 | API: primeiro CRUD (GET, POST, PUT, DELETE) | Simplificada / API.txt |
-| API: busca, JOIN, cliente e agendamento | Simplificada / API.txt (seções EXTRA), Completa / #4, #5 e #6 |
-| Login, bcrypt e JWT | Completa / #1_criptografia_back.txt |
-| CORS, fetch, tela de login, sessão e principal | Completa / #2_fetch_cors_login.txt |
-| Tela de barbeiro (CRUD, busca, edição) | Completa / #3_crudFront.txt (busca: #4) |
-| Tela de cliente (select com chave estrangeira) | Completa / #5_dropdown_FK.txt |
-| Tela de agendamentos | Completa / #6_agendamentos.txt |
+| API: busca, JOIN, cliente e agendamento | Simplificada / API.txt (seções EXTRA), Completa / backend / #1_busca_e_JOIN.txt e #2_cliente_e_agendamento_API.txt |
+| Login, bcrypt e JWT | Completa / backend / #3_criptografia_e_login.txt |
+| CORS, fetch, tela de login, sessão e principal | Completa / frontend / #1_fetch_cors_login.txt |
+| Tela de barbeiro (CRUD, busca, edição) | Completa / frontend / #2_crud_barbeiro.txt |
+| Tela de cliente (select com chave estrangeira) | Completa / frontend / #3_cliente_dropdown.txt |
+| Tela de agendamentos | Completa / frontend / #4_agendamentos.txt |
 
 ## Ordem das entregas (a mesma do caderno de prova)
 

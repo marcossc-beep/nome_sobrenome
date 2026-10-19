@@ -4,123 +4,129 @@ Um banco de dados relacional é organizado em tabelas conectadas entre si por ch
 Para entender como as informações ficam guardadas:
 
 - Tabela: É como uma aba de planilha (ex: Tabela "usuario", Tabela "sala", Tabela "reuniao").
-- Colunas (Campos): Definem o tipo de informação salva (ex: nome, email, cpf, data).
-- Linhas (Registros/Tuplas): São os dados cadastrados (ex: Linha 1 possui o usuário "Carlos", email "carlos@email.com").
+- Colunas (Campos): Definem o tipo de informação salva (ex: nome, cpf, data_hora).
+- Linhas (Registros/Tuplas): São os dados cadastrados (ex: Linha 1 possui o usuário "Beatriz Lima", cpf "444.555.666-77").
 
 O SQL (Structured Query Language) é a linguagem que usamos para criar as tabelas, inserir, atualizar, consultar e deletar registros no PostgreSQL via PGAdmin.
+
+Os exemplos deste arquivo são de OUTRO sistema (usuários, salas e reuniões). Na prova você faz a mesma coisa com as tabelas do caderno.
+As linhas " e " só marcam onde o código começa e termina. Não copie essas linhas.
 
 
 // ### Tipos de Dados Mais Utilizados
 
 - SERIAL: Cria um número inteiro sequencial automático (1, 2, 3...) a cada cadastro. Usado para a Chave Primária (id).
-- VARCHAR(100): Texto com limite fixo de caracteres. Ideal para nomes, emails, CPF, senhas e telefones.
-- TEXT: Texto longo sem limite rígido. Ideal para observações, pautas e descrições.
-- INTEGER / INT: Números inteiros sem casas decimais (ex: número do bloco, capacidade, chaves estrangeiras).
+- VARCHAR(255): Texto com limite fixo de caracteres. Ideal para nomes, CPF, senhas e telefones.
+- INT: Números inteiros sem casas decimais (ex: chaves estrangeiras).
 - TIMESTAMP: Armazena data e hora juntas (ex: 2026-10-15 14:30:00).
-- BOOLEAN: Valor verdadeiro ou falso (true/false).
+
+OBS: use VARCHAR(255) em cpf e senha. Quando forem criptografados (bcrypt), o valor guardado vira um hash de 60 caracteres e não cabe em VARCHAR(20).
 
 
 // ### Regras e Restrições (Constraints)
 
-- PRIMARY KEY: Identificador único da linha. Não pode se repetir nem ser nulo (é o "CPF" daquela linha).
+- PRIMARY KEY: Identificador único da linha. Não pode se repetir nem ser nulo.
 - NOT NULL: Torna o preenchimento da coluna obrigatório.
-- UNIQUE: Impede que existam dois registros com o mesmo valor (ex: dois usuários com o mesmo e-mail).
+- UNIQUE: Impede que existam dois registros com o mesmo valor (ex: dois usuários com o mesmo CPF).
 - REFERENCES tabela(id): Cria a Chave Estrangeira (Foreign Key / FK), vinculando o registro atual ao ID de outra tabela.
 - ON DELETE CASCADE: Se o registro pai for deletado, todos os registros filhos ligados a ele serão apagados automaticamente.
 
 
-// ### Estrutura de Criação de Tabelas (DDL para Prova Prática)
+// ### Antes de criar as tabelas: criar o banco
+
+No pgAdmin, crie o banco e abra o Query Tool DENTRO dele (botão direito no banco > Query Tool). Todos os comandos abaixo rodam ali.
+
+    CREATE DATABASE saep_db;
+
+
+// ### Criação de Tabelas (DDL para Prova Prática)
 
 Para garantir a pontuação no banco de dados, o script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
 
 -- 1. Tabela Base: USUARIO (Não depende de nenhuma outra tabela)
+
 CREATE TABLE usuario (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    cpf VARCHAR(20) NOT NULL,
-    senha VARCHAR(100) NOT NULL,
-    telefone VARCHAR(20)
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL
 );
 
--- 2. Tabela Secundária: SALA (Possui vinculo com quem é o responsável/criador)
+
+-- 2. Tabela Secundária: SALA (cada sala pertence a um usuário)
+
 CREATE TABLE sala (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
+    nome VARCHAR(255) NOT NULL,
     bloco VARCHAR(50) NOT NULL,
-    capacidade INT NOT NULL,
     usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE
 );
 
 -- 3. Tabela Principal/Relacionamento: REUNIAO (Vincula Usuário e Sala)
+
 CREATE TABLE reuniao (
     id SERIAL PRIMARY KEY,
-    assunto VARCHAR(150) NOT NULL,
-    data_reuniao TIMESTAMP NOT NULL,
-    observacao TEXT,
+    data_hora TIMESTAMP NOT NULL,
     usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
     sala_id INT NOT NULL REFERENCES sala(id) ON DELETE CASCADE
 );
+
+// Como ler uma chave estrangeira:   usuario_id INT NOT NULL REFERENCES usuario(id)
+//   "a coluna usuario_id é um número obrigatório que precisa existir na coluna id da tabela usuario".
 
 
 // ### População Inicial do Banco (REQUISITO DA PROVA: Mínimo 3 registros por tabela)
 
 É obrigatório inserir no mínimo 3 registros em TODAS as tabelas criadas no script `.sql`, respeitando a ordem das chaves estrangeiras.
+- A lista de colunas e os valores precisam estar na mesma ordem e na mesma quantidade.
+- Toda coluna NOT NULL precisa receber valor (o id não, ele é automático).
+- O nome da tabela é o mesmo do CREATE TABLE (reuniao, não "reunioes").
 
--- Inserindo 3 Usuários
-INSERT INTO usuario (nome, email, cpf, senha, telefone) VALUES
-('Carlos Silva', 'carlos@email.com', '111.222.333-44', 'senha123', '48999991111'),
-('Ana Souza', 'ana@email.com', '222.333.444-55', 'senha456', '48999992222'),
-('Marcos Oliveira', 'marcos@email.com', '333.444.555-66', 'senha789', '48999993333');
+-- Inserindo 3 Usuários (os ids saem sozinhos: 1, 2 e 3)
+
+INSERT INTO usuario (nome, cpf, senha) VALUES
+('Beatriz Lima', '444.555.666-77', 'senha123'),
+('Rafael Costa', '555.666.777-88', 'senha456'),
+('Juliana Alves', '666.777.888-99', 'senha789');
 
 -- Inserindo 3 Salas (vinculadas aos IDs de usuário 1, 2 e 3)
-INSERT INTO sala (nome, bloco, capacidade, usuario_id) VALUES
-('Auditório Principal', 'Bloco A', 50, 1),
-('Laboratório de Inovação', 'Bloco B', 20, 2),
-('Sala de Reuniões 01', 'Bloco C', 10, 3);
 
--- Inserindo 3 Reuniões (vinculadas aos usuários e salas correspondentes)
-INSERT INTO reuniao (assunto, data_reuniao, observacao, usuario_id, sala_id) VALUES
-('Ainhamento do Projeto A', '2026-10-10 14:00:00', 'Discutir cronograma das entregas', 1, 1),
-('Revisão do Orçamento', '2026-10-11 10:30:00', 'Apresentação da planilha de custos', 2, 2),
-('Planejamento Semestral', '2026-10-12 16:00:00', 'Definição de metas', 3, 3);
+INSERT INTO sala (nome, bloco, usuario_id) VALUES
+('Auditório Principal', 'Bloco A', 1),
+('Laboratório de Inovação', 'Bloco B', 2),
+('Sala de Reuniões 01', 'Bloco C', 3);
+
+-- Inserindo 3 Reuniões (vinculadas aos usuários e salas correspondentes, com datas diferentes)
+
+INSERT INTO reuniao (data_hora, usuario_id, sala_id) VALUES
+('2026-12-10 14:00:00', 1, 1),
+('2026-12-08 09:30:00', 2, 2),
+('2026-12-09 16:00:00', 3, 3);
+
+-- Conferindo: cada consulta deve mostrar 3 linhas
+
+SELECT * FROM usuario;
+SELECT * FROM sala;
+SELECT * FROM reuniao;
 
 
-// ### Comandos de Manipulação de Dados (DML)
-
-// 1. SELECT (Buscar / Ler dados)
+// ### Consultando dados (SELECT)
 
 -- Buscar todos os campos de todos os usuários
 SELECT * FROM usuario;
 
--- Buscar apenas nome e email
-SELECT nome, email FROM usuario;
+-- Buscar apenas nome e cpf
+SELECT nome, cpf FROM usuario;
 
 -- Filtrar busca por ID
 SELECT * FROM usuario WHERE id = 1;
 
--- Busca por termo utilizando filtro parcial (LOWER e ILIKE ignoram maiúsculas/minúsculas)
+-- Busca por termo (ILIKE ignora maiúsculas/minúsculas e o % vale por "qualquer texto")
 -- Este é o padrão SQL utilizado na rota GET com filtro da API:
-SELECT * FROM usuario 
-WHERE LOWER(nome) LIKE LOWER('%carlos%') OR LOWER(email) LIKE LOWER('%carlos%') 
-ORDER BY id ASC;
+SELECT * FROM usuario WHERE nome ILIKE '%ana%' ORDER BY id ASC;
 
-
-// 2. UPDATE (Atualizar / Alterar dados)
-// ATENÇÃO: Nunca execute UPDATE sem a cláusula WHERE! Se esquecer o WHERE, alterará a tabela toda.
-
--- Atualizando dados de um usuário pelo ID
-UPDATE usuario 
-SET nome = 'Carlos Silva Alterado', email = 'carlos.novo@email.com', senha = 'novasenha123' 
-WHERE id = 1;
-
-
-// 3. DELETE (Deletar / Remover dados)
-// ATENÇÃO: Nunca execute DELETE sem a cláusula WHERE!
-
--- Deletando um registro específico pelo ID
-DELETE FROM usuario WHERE id = 1;
--- OBS: Por causa do ON DELETE CASCADE, as salas e reuniões associadas a este usuario_id serão excluídas automaticamente.
+-- Ordenar pela data (ASC = mais antiga primeiro)
+SELECT * FROM reuniao ORDER BY data_hora ASC;
 
 
 // ### Consultas com Junção de Tabelas (INNER JOIN)
@@ -129,56 +135,51 @@ O INNER JOIN serve para relacionar e exibir na mesma consulta dados que estão d
 
 // 1) JOIN Simples entre 2 Tabelas (Sala + Usuário Responsável):
 
-SELECT 
+SELECT
     sala.id AS id_sala,
     sala.nome AS nome_sala,
     sala.bloco,
-    sala.capacidade,
-    usuario.nome AS responsavel_sala,
-    usuario.email AS email_responsavel
+    usuario.nome AS responsavel_sala
 FROM sala
 INNER JOIN usuario ON sala.usuario_id = usuario.id;
 
 
-// 2) JOIN Triplo entre 3 Tabelas Encadeadas (Reunião + Usuário Organizador + Sala):
+// 2) JOIN Triplo entre 3 Tabelas (Reunião + Usuário Organizador + Sala), ordenado por data:
 
-SELECT 
+SELECT
     reuniao.id AS id_reuniao,
-    reuniao.assunto,
-    reuniao.data_reuniao,
-    reuniao.observacao,
+    reuniao.data_hora,
     usuario.nome AS organizador,
-    usuario.email AS email_organizador,
     sala.nome AS sala_reservada,
     sala.bloco
 FROM reuniao
 INNER JOIN usuario ON reuniao.usuario_id = usuario.id
 INNER JOIN sala ON reuniao.sala_id = sala.id
-ORDER BY reuniao.data_reuniao ASC;
-// ======================================================================
-// ### Salvando o script: saep_db.sql (ENTREGA 3 da prova)
-// ======================================================================
-// O que vale na prova é o ARQUIVO saep_db.sql, não só ter rodado os comandos no pgAdmin.
-//  1. Escreva os CREATE TABLE e depois os INSERT no arquivo saep_db.sql (da raiz do projeto, no VS Code).
-//  2. Para testar: copie o conteúdo para o Query Tool do pgAdmin, DENTRO do banco saep_db, e execute.
-//  3. Teste o script do zero: apague as tabelas e rode de novo.
-//
-//     DROP TABLE IF EXISTS agendamento, cliente, barbeiro, usuario;
-//
-//     (use os nomes das SUAS tabelas. Com todas no mesmo DROP o Postgres apaga na ordem certa sozinho)
-//
-// Banco: crie no pgAdmin com   CREATE DATABASE saep_db;   e abra o Query Tool dentro dele.
-// Erros comuns:
-//  - "relation ... does not exist": criou as tabelas fora do banco saep_db, ou na ordem errada.
-//  - "violates foreign key constraint": INSERT com uma chave estrangeira que não existe (ex: barbeiro_id = 9).
-//  - "duplicate key value violates unique constraint": rodou os INSERT duas vezes (email UNIQUE repetido).
+ORDER BY reuniao.data_hora ASC;
+
+// OBS: o AS dá um apelido à coluna. Sem ele, usuario.nome e sala.nome viram duas colunas "nome" e se confundem.
+// Escreva sempre tabela.coluna (reuniao.id, usuario.nome), senão o banco reclama de "id ambíguo".
 
 
-// ======================================================================
-// ### Gerando o DER no pgAdmin (ENTREGA 2 da prova: der.png)
-// ======================================================================
-//  1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
-//  2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
-//  3. O diagrama mostra as tabelas e as setas das chaves estrangeiras. Confira se todas as tabelas aparecem.
-//  4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
-//  5. Renomeie para der.png e coloque na raiz do projeto (a prova aceita der.png ou der.pdf).
+// ### Alterando e apagando dados (UPDATE e DELETE)
+
+// 1. UPDATE (Atualizar / Alterar dados)
+// ATENÇÃO: Nunca execute UPDATE sem a cláusula WHERE! Se esquecer o WHERE, alterará a tabela toda.
+
+-- Atualizando só a data de uma reunião
+UPDATE reuniao SET data_hora = '2026-12-20 09:00:00' WHERE id = 1;
+
+-- Atualizando dados de um usuário pelo ID
+UPDATE usuario SET nome = 'Beatriz Lima Souza', senha = 'novasenha123' WHERE id = 1;
+
+
+// 2. DELETE (Deletar / Remover dados)
+// ATENÇÃO: Nunca execute DELETE sem a cláusula WHERE!
+
+-- Deletando um registro específico pelo ID
+DELETE FROM usuario WHERE id = 3;
+
+-- OBS: Por causa do ON DELETE CASCADE, a sala e a reunião associadas a este usuario_id serão excluídas automaticamente.
+-- Sem o CASCADE, o banco recusaria o DELETE de um usuário que tem salas e reuniões (erro de chave estrangeira).
+
+

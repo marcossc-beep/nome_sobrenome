@@ -8,7 +8,9 @@
 //   4.2 Meio para sair do sistema (peso 1)
 //   4.3 Acesso a Barbeiro, Cliente e Agendamento a partir da principal (peso 1)
 //
-// Pré-requisito: a API pronta, com a rota POST /login (arquivo #1_criptografia_back.txt).
+// Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#3_criptografia_e_login.txt).
+// Rotas da API que as telas deste arquivo usam: POST /login.
+// Para treinar só o front-end, a API precisa estar rodando com as rotas citadas em cada arquivo.
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código, nada do que você
 // já fez precisa ser apagado. As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa

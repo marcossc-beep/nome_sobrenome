@@ -1,0 +1,342 @@
+// ### Banco de dados com PostgreSQL: criar tabelas, inserir, consultar e juntar
+//
+// Critérios da lista de verificação que esta documentação ajuda a cumprir:
+//   1.3 Gerou o diagrama entidade relacionamento (peso 1)
+//   2.1 Criou as tabelas respeitando a chave estrangeira de cada relacionamento (peso 2)
+//   2.2 Inseriu pelo menos três registros em cada uma das tabelas (peso 1)
+//
+// Os exemplos deste arquivo usam OUTRO sistema (usuários, salas e reuniões), só para mostrar o formato.
+// Na prova você faz a mesma coisa com as tabelas do caderno (usuario, barbeiro, cliente, agendamento).
+//
+// As linhas "// >>> sql" e "// <<<" só marcam onde o código começa e termina.
+// Não copie essas linhas, copie só o que está entre elas.
+
+
+// ### O que é um banco de dados relacional
+
+Um banco de dados relacional é organizado em tabelas conectadas entre si por chaves (IDs).
+
+- Tabela: é como uma aba de planilha (ex: tabela "usuario", tabela "sala", tabela "reuniao").
+- Coluna (campo): define o tipo de informação guardada (ex: nome, cpf, senha, data_hora).
+- Linha (registro): é um dado cadastrado (ex: a linha 1 da tabela usuario é o usuário "Beatriz Lima").
+
+O SQL (Structured Query Language) é a linguagem que usamos para criar tabelas, inserir, consultar, atualizar e apagar
+registros no PostgreSQL, pelo pgAdmin.
+
+
+// ### Passo 1: criar o banco e abrir o editor de comandos
+
+No pgAdmin:
+1. Clique com o botão direito em Databases > Create > Database, com o nome saep_db.
+   (ou, no Query Tool de qualquer banco, rode:   CREATE DATABASE saep_db;)
+2. Clique com o botão direito no banco saep_db > Query Tool.
+3. Tudo que você digitar dali em diante roda DENTRO do saep_db. Execute com F5 (ou o botão de play).
+
+Se criar as tabelas no banco errado (por exemplo o "postgres"), a API depois não vai encontrá-las.
+
+
+// ### Passo 2: tipos de dados mais usados
+
+- SERIAL: número inteiro sequencial automático (1, 2, 3...). Usado na chave primária (id).
+- VARCHAR(100): texto com limite de caracteres. Ideal para nomes, CPF, senhas e telefones.
+- TEXT: texto longo, sem limite. Ideal para observações e descrições.
+- INT: número inteiro. Toda chave estrangeira é INT.
+- TIMESTAMP: data e hora juntas (ex: 2026-11-18 14:30:00).
+- BOOLEAN: verdadeiro ou falso (true/false).
+
+IMPORTANTE (criptografia): quando a senha e o CPF forem criptografados (bcrypt), o valor guardado deixa de ser
+"senha123" e vira um hash de 60 caracteres, algo como $2b$10$Q3x9... Por isso as colunas que vão receber hash
+(cpf e senha de quem tem dado criptografado) devem ser VARCHAR(255). Em VARCHAR(20) o hash não cabe e o banco
+responde "value too long for type character varying(20)".
+
+
+// ### Passo 3: regras das colunas (constraints)
+
+- PRIMARY KEY: identificador único da linha. Não repete e não pode ser nulo.
+- NOT NULL: a coluna é obrigatória. Se você esquecer de preenchê-la no INSERT, o banco dá erro.
+- UNIQUE: não deixa existir dois registros com o mesmo valor (ex: dois usuários com o mesmo CPF).
+  O login por CPF precisa disso: o CPF tem que identificar UMA pessoa só.
+- REFERENCES tabela(id): cria a chave estrangeira (FK), ligando este registro ao id de outra tabela.
+- ON DELETE CASCADE: se o registro "pai" for apagado, os "filhos" ligados a ele são apagados juntos.
+  Sem isso, apagar um pai que tem filhos dá erro de chave estrangeira.
+
+
+// ### Passo 4: modelar antes de criar (quem depende de quem)
+
+Pergunta para cada tabela: "ela precisa de outra para existir?"
+
+    usuario  ---<  sala        (uma sala pertence a um usuário; um usuário tem várias salas)
+    usuario  ---<  reuniao     (uma reunião tem um usuário organizador)
+    sala     ---<  reuniao     (uma reunião acontece em uma sala)
+
+- A tabela que fica do lado "muitos" (sala, reuniao) leva a chave estrangeira (usuario_id, sala_id).
+- A tabela que só tem relacionamento (reuniao liga usuario e sala) leva DUAS chaves estrangeiras.
+- Crie primeiro quem NÃO depende de ninguém (usuario), depois quem depende só dele (sala),
+  e por último quem depende dos dois (reuniao). Criar fora de ordem dá erro.
+
+Isto é o que o DER vai mostrar: as tabelas e as setas das chaves estrangeiras.
+
+
+// ### Passo 5: criar as tabelas (CREATE TABLE)
+
+1. Tabela base: usuario (não depende de nenhuma outra). Quem faz login usa cpf e senha.
+
+// >>> sql
+CREATE TABLE usuario (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL
+);
+// <<<
+
+2. Tabela secundária: sala (cada sala pertence a um usuário).
+
+// >>> sql
+CREATE TABLE sala (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    bloco VARCHAR(50) NOT NULL,
+    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE
+);
+// <<<
+
+3. Tabela de relacionamento: reuniao (vincula usuário e sala em uma data).
+
+// >>> sql
+CREATE TABLE reuniao (
+    id SERIAL PRIMARY KEY,
+    data_hora TIMESTAMP NOT NULL,
+    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
+    sala_id INT NOT NULL REFERENCES sala(id) ON DELETE CASCADE
+);
+// <<<
+
+// Como ler uma chave estrangeira:   usuario_id INT NOT NULL REFERENCES usuario(id)
+//   usuario_id  = nome da coluna nesta tabela
+//   INT         = mesmo tipo do id da outra tabela
+//   NOT NULL    = obrigatório (toda sala TEM que ter um usuário)
+//   REFERENCES usuario(id) = "o valor tem que existir na coluna id da tabela usuario"
+
+
+// ### Passo 6: inserir os dados (INSERT) - mínimo 3 registros em TODAS as tabelas
+
+É obrigatório ter no mínimo 3 registros em TODAS as tabelas criadas, na mesma ordem em que foram criadas
+(as chaves estrangeiras só podem apontar para registros que já existem).
+
+Regras do INSERT:
+- A lista de colunas entre parênteses e os valores têm que estar na MESMA ordem e na MESMA quantidade.
+- Toda coluna NOT NULL (sem valor padrão) precisa estar na lista. O id (SERIAL) não precisa.
+- O nome da tabela é o mesmo do CREATE TABLE: se você criou "reuniao", é INSERT INTO reuniao (e não "reunioes").
+- Texto e data vão entre aspas simples.
+
+// >>> sql
+INSERT INTO usuario (nome, cpf, senha) VALUES
+('Beatriz Lima', '444.555.666-77', 'senha123'),
+('Rafael Costa', '555.666.777-88', 'senha456'),
+('Juliana Alves', '666.777.888-99', 'senha789');
+// <<<
+
+Os ids foram gerados sozinhos: Beatriz = 1, Rafael = 2, Juliana = 3. As próximas tabelas apontam para esses números.
+
+// >>> sql
+INSERT INTO sala (nome, bloco, usuario_id) VALUES
+('Auditório Principal', 'Bloco A', 1),
+('Laboratório de Inovação', 'Bloco B', 2),
+('Sala de Reuniões 01', 'Bloco C', 3);
+// <<<
+
+// >>> sql
+INSERT INTO reuniao (data_hora, usuario_id, sala_id) VALUES
+('2026-12-10 14:00:00', 1, 1),
+('2026-12-08 09:30:00', 2, 2),
+('2026-12-09 16:00:00', 3, 3);
+// <<<
+
+// Dica: use datas DIFERENTES e fora de ordem. Assim, quando você ordenar por data, dá para ver a ordenação funcionando.
+// Dica: o usuario_id e o sala_id precisam existir (1, 2 ou 3 neste exemplo). Um 9 daria erro de chave estrangeira.
+
+Conferindo se ficou 3 em cada tabela (critério 2.2). Esta consulta mostra a contagem das três de uma vez:
+
+// >>> sql
+SELECT 'usuario' AS tabela, COUNT(*) AS registros FROM usuario
+UNION ALL
+SELECT 'sala', COUNT(*) FROM sala
+UNION ALL
+SELECT 'reuniao', COUNT(*) FROM reuniao;
+// <<<
+
+
+// ### Passo 7: consultar os dados (SELECT)
+
+// >>> sql
+-- Todos os campos de todos os usuários (* = todas as colunas)
+SELECT * FROM usuario;
+
+-- Só algumas colunas
+SELECT nome, cpf FROM usuario;
+
+-- Filtrando por id
+SELECT * FROM usuario WHERE id = 1;
+
+-- Filtrando por CPF (é assim que o login encontra a pessoa)
+SELECT * FROM usuario WHERE cpf = '444.555.666-77';
+
+-- Ordenando: ASC = do menor para o maior, DESC = do maior para o menor
+SELECT * FROM reuniao ORDER BY data_hora ASC;
+SELECT * FROM reuniao ORDER BY data_hora DESC;
+// <<<
+
+
+// ### Passo 8: busca por termo (ILIKE e %)
+
+A busca pede um termo digitado pelo usuário e devolve só os registros que combinam.
+
+// >>> sql
+-- ILIKE ignora maiúsculas e minúsculas. O % vale por "qualquer texto antes ou depois".
+SELECT * FROM usuario WHERE nome ILIKE '%ana%';
+
+-- Buscando o termo em mais de uma coluna com OR
+SELECT * FROM sala WHERE nome ILIKE '%lab%' OR bloco ILIKE '%lab%' ORDER BY id;
+// <<<
+
+// - '%ana%' acha "Juliana", "Ana Souza", "Mariana"... (qualquer nome que tenha "ana" dentro).
+// - LIKE comum diferencia maiúscula de minúscula; ILIKE não.
+// - Na API (documentação API.txt, seção Busca por termo) o termo vem da URL e entra no lugar do texto fixo.
+// - Colunas que guardam HASH (cpf do barbeiro, senha) não servem para busca: o hash não se parece com o texto original.
+
+
+// ### Passo 9: juntar tabelas (INNER JOIN)
+
+A tabela reuniao só guarda números (usuario_id e sala_id). Para mostrar os NOMES, juntamos as tabelas
+usando a chave estrangeira. O INNER JOIN traz só os registros que têm correspondência nas duas tabelas.
+
+Receita:   FROM tabela_com_FK   INNER JOIN tabela_pai ON tabela_com_FK.coluna_fk = tabela_pai.id
+
+1) JOIN simples entre 2 tabelas (sala + usuário responsável):
+
+// >>> sql
+SELECT
+    sala.id AS id_sala,
+    sala.nome AS nome_sala,
+    sala.bloco,
+    usuario.nome AS responsavel_sala
+FROM sala
+INNER JOIN usuario ON sala.usuario_id = usuario.id;
+// <<<
+
+2) JOIN triplo entre 3 tabelas, ordenado por data (reunião + organizador + sala):
+
+// >>> sql
+SELECT
+    reuniao.id AS id_reuniao,
+    reuniao.data_hora,
+    usuario.nome AS organizador,
+    usuario.cpf AS cpf_organizador,
+    sala.nome AS sala_reservada,
+    sala.bloco
+FROM reuniao
+INNER JOIN usuario ON reuniao.usuario_id = usuario.id
+INNER JOIN sala ON reuniao.sala_id = sala.id
+ORDER BY reuniao.data_hora ASC;
+// <<<
+
+3) JOIN com filtro (só as reuniões de um usuário):
+
+// >>> sql
+SELECT reuniao.id, reuniao.data_hora, sala.nome AS sala
+FROM reuniao
+INNER JOIN sala ON reuniao.sala_id = sala.id
+WHERE reuniao.usuario_id = 1;
+// <<<
+
+// Pontos para entender:
+// - AS dá um apelido à coluna. Sem ele, usuario.nome e sala.nome viram duas colunas chamadas "nome" e se confundem.
+// - Escreva sempre tabela.coluna (reuniao.id, usuario.nome). Só "id" daria erro: duas tabelas têm a coluna id.
+// - O ORDER BY vem por último, depois dos JOIN.
+// - Esta consulta de 3 tabelas é a que a tela de agendamentos da prova usa (ordenada por data).
+
+
+// ### Passo 10: alterar dados (UPDATE)
+
+// ATENÇÃO: nunca rode UPDATE sem WHERE. Sem WHERE, TODAS as linhas da tabela são alteradas.
+
+// >>> sql
+-- Mudando só a data de uma reunião (parecido com "atualizar a data do agendamento")
+UPDATE reuniao SET data_hora = '2026-12-20 09:00:00' WHERE id = 1;
+
+-- Mudando mais de uma coluna de uma vez
+UPDATE usuario SET nome = 'Beatriz Lima Souza', senha = 'novasenha123' WHERE id = 1;
+// <<<
+
+// Depois de um UPDATE, rode um SELECT para conferir.
+
+
+// ### Passo 11: apagar dados (DELETE) e o efeito do ON DELETE CASCADE
+
+// ATENÇÃO: nunca rode DELETE sem WHERE. Sem WHERE, TODAS as linhas da tabela são apagadas.
+
+// >>> sql
+DELETE FROM usuario WHERE id = 3;
+// <<<
+
+// Por causa do ON DELETE CASCADE, a sala e a reunião ligadas ao usuário 3 também foram apagadas.
+// Confira com a mesma consulta de contagem do passo 6: usuario e sala ficam com 2 e reuniao com 2.
+//
+// Sem o ON DELETE CASCADE o resultado seria um erro:
+//   update or delete on table "usuario" violates foreign key constraint
+// porque o usuário ainda teria salas e reuniões apontando para ele.
+// Isso importa na prova: a tela de barbeiros tem o botão excluir e todo barbeiro do banco tem cliente e agendamento.
+
+
+// ### Passo 12: salvando o script saep_db.sql (ENTREGA 3 da prova)
+
+O que vale na prova é o ARQUIVO saep_db.sql, não só ter rodado os comandos no pgAdmin.
+1. Escreva os CREATE TABLE e depois os INSERT no arquivo saep_db.sql (da raiz do projeto, no VS Code).
+   A ordem do arquivo é a mesma dos passos 5 e 6: todos os CREATE e depois todos os INSERT.
+2. Para testar: copie o conteúdo para o Query Tool do pgAdmin, DENTRO do banco saep_db, e execute.
+3. Teste o script do zero: apague as tabelas e rode de novo. Todas no mesmo DROP, o Postgres apaga na ordem certa:
+
+// >>> sql
+DROP TABLE IF EXISTS reuniao, sala, usuario;
+// <<<
+
+// (use os nomes das SUAS tabelas). Dica: coloque esse DROP no começo do saep_db.sql, assim o script pode ser rodado
+// quantas vezes você quiser. Sem ele, rodar duas vezes dá "relation already exists".
+
+Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
+
+
+// ### Passo 13: gerando o DER no pgAdmin (ENTREGA 2 da prova: der.png)
+
+1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
+2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
+3. O diagrama mostra as tabelas e as setas das chaves estrangeiras. Confira se TODAS as tabelas aparecem
+   e se cada seta liga a tabela certa (cliente > barbeiro, agendamento > barbeiro e cliente).
+4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
+5. Renomeie para der.png e coloque na raiz do projeto (a prova aceita der.png ou der.pdf).
+
+
+// ### Revisão pela lista de verificação
+
+[ ] 2.1 cada relacionamento tem sua chave estrangeira (REFERENCES) e as tabelas foram criadas na ordem certa (peso 2)
+[ ] 2.2 TODAS as tabelas têm pelo menos 3 registros, conferido com a consulta de contagem (peso 1)
+[ ] 1.3 der.png mostra todas as tabelas e as ligações (peso 1)
+[ ] o arquivo saep_db.sql roda inteiro, do zero, sem nenhum erro
+
+
+// ### Erros comuns
+
+- relation "reunioes" does not exist: o nome da tabela no INSERT é diferente do nome do CREATE TABLE
+  (plural a mais ou a menos). Copie o nome exatamente como criou.
+- null value in column "senha" violates not-null constraint: faltou a coluna senha na lista do INSERT (ou o valor).
+  Toda coluna NOT NULL precisa receber um valor.
+- insert or update on table "sala" violates foreign key constraint: o usuario_id (ou sala_id) apontado não existe.
+  Confira os ids com SELECT * FROM usuario.
+- Os INSERT de uma tabela falham em cascata: se barbeiro não foi populado, cliente e agendamento também falham,
+  pois dependem dele. Corrija o primeiro erro e rode de novo do zero.
+- value too long for type character varying(20): a coluna é pequena demais para o hash. Use VARCHAR(255).
+- relation "usuario" already exists / duplicate key value violates unique constraint: o script foi rodado duas vezes.
+  Rode o DROP TABLE do passo 12 e depois o script de novo.
+- column "id" is ambiguous: no JOIN, escreva tabela.coluna.
+- As tabelas foram criadas no banco errado: confira no pgAdmin qual banco está selecionado antes de abrir o Query Tool.

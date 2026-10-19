@@ -1,4 +1,4 @@
-// ### Busca por termo, JOIN e ordenação (API e tela)
+// ### Busca por termo, JOIN e ordenação (API)
 //
 // Critérios que esta documentação ajuda a cumprir:
 //   5.2 Busca com no mínimo um termo (peso 3)
@@ -9,7 +9,7 @@
 // Não copie essas linhas, copie só o que está entre elas.
 //
 // As rotas abaixo já aparecem com { preHandler: autenticar }. Se você ainda não criou a função autenticar
-// (#1_criptografia_back.txt), deixe essa parte de fora por enquanto e acrescente depois.
+// (#3_criptografia_e_login.txt), deixe essa parte de fora por enquanto e acrescente depois.
 
 
 // ### PARTE 1: Busca por termo
@@ -69,9 +69,9 @@ GET http://localhost:6767/barbeiros?busca=zzz
 Authorization: Bearer {{token}}
 
 
-// ### Tela: o formulário de busca
+// ### A tela de busca (está na documentação do front-end)
 
-O código do formulário e das funções buscar() e limparBusca() está em #3_crudFront.txt.
+O código do formulário e das funções buscar() e limparBusca() está em ../frontend/#2_crud_barbeiro.txt.
 Resumo do caminho: o botão Buscar chama buscar(event) > carregar(termo) > api('/barbeiros?busca=termo')
 > a tabela é montada de novo só com o resultado.
 encodeURIComponent(busca) protege o termo na URL (espaços e acentos viram códigos seguros).

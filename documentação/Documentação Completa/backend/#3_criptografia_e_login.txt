@@ -215,7 +215,7 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
 })
 // <<<
 
-// A listagem GET /barbeiros (com busca) está no arquivo #4_filtros_e_JOIN.txt.
+// A listagem GET /barbeiros (com busca) está no arquivo #1_busca_e_JOIN.txt.
 
 
 // ### Passo 5: os dados que você inseriu no banco precisam virar hash

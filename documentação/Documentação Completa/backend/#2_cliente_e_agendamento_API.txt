@@ -1,0 +1,175 @@
+// ### API de cliente e de agendamento: cadastrar cliente com barbeiro, cadastrar agendamento e atualizar a data
+//
+// Critérios da lista de verificação que esta documentação ajuda a cumprir (na API):
+//   6.1 Inserção de um novo cliente associando-o a um barbeiro (peso 3)
+//   7.1 Listar os agendamentos ordenados por data (peso 3): a rota GET está em #1_busca_e_JOIN.txt
+//   7.2 Atualizar a data de um agendamento (peso 2)
+//
+// As telas que usam estas rotas estão em ../frontend/#3_cliente_dropdown.txt e ../frontend/#4_agendamentos.txt.
+//
+// Como usar este arquivo: siga as seções NA ORDEM. Cada uma só acrescenta código ao server.js.
+// As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
+// Não copie essas linhas, copie só o que está entre elas.
+
+
+// ### CLIENTE: a ideia
+
+O caderno diz: "Ao cadastrar um novo cliente, o usuário deve associá-lo a um barbeiro."
+No banco isso é a chave estrangeira cliente.barbeiro_id (NOT NULL: todo cliente tem barbeiro).
+O front manda o barbeiro_id no corpo do POST e a API confere se esse barbeiro existe antes de gravar.
+
+
+// ### CLIENTE: rota POST /clientes
+
+A listagem GET /clientes (com JOIN, para trazer o nome do barbeiro) está em #1_busca_e_JOIN.txt.
+Cole no server.js, junto das outras rotas:
+
+// >>> server.js
+servidor.post('/clientes', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.nome || !body.barbeiro_id) {
+        return reply.status(400).send({ message: 'Nome e barbeiro são obrigatórios!' })
+    }
+
+    const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
+    if (barbeiro.rows.length === 0) {
+        return reply.status(400).send({ message: 'Barbeiro informado não existe!' })
+    }
+
+    await sql.query(
+        'INSERT INTO cliente (nome, telefone, estilo_corte, barbeiro_id) VALUES ($1, $2, $3, $4)',
+        [body.nome, body.telefone, body.estilo_corte, body.barbeiro_id]
+    )
+
+    return reply.status(201).send({ message: 'Cliente cadastrado!' })
+})
+// <<<
+
+// A conferência (SELECT id FROM barbeiro...) devolve uma mensagem clara. Sem ela, um barbeiro_id inexistente
+// estoura um erro de chave estrangeira do Postgres e a API responde 500.
+// (Se ainda não fez a função autenticar, tire o { preHandler: autenticar } por enquanto.)
+
+### Testes no referencias.http
+
+POST http://localhost:6767/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Pedro Henrique",
+    "telefone": "48988884444",
+    "estilo_corte": "Low fade",
+    "barbeiro_id": 1
+}
+
+### Barbeiro que não existe (esperado: 400)
+POST http://localhost:6767/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Teste",
+    "barbeiro_id": 999
+}
+
+
+// ### AGENDAMENTO: como a data é guardada e enviada
+
+- No banco a coluna é TIMESTAMP (data e hora juntas): 2026-11-18 14:30:00.
+- Front e API trocam datas no formato ISO: 2026-11-18T14:30 (o T separa a data da hora).
+- O Postgres aceita esse formato direto. Não precisa converter.
+
+
+// ### AGENDAMENTO: rotas POST e PUT
+
+O GET /agendamentos (JOIN triplo e ORDER BY data_agendamento) é o critério 7.1.
+Ele está explicado em #1_busca_e_JOIN.txt. Aqui ficam as duas rotas que faltam.
+
+O POST existe para você conseguir criar agendamentos de teste pela tela:
+
+// >>> server.js
+servidor.post('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+
+    if (!body || !body.data_agendamento || !body.servico || !body.barbeiro_id || !body.cliente_id) {
+        return reply.status(400).send({ message: 'Data, serviço, barbeiro e cliente são obrigatórios!' })
+    }
+
+    await sql.query(
+        'INSERT INTO agendamento (data_agendamento, servico, barbeiro_id, cliente_id) VALUES ($1, $2, $3, $4)',
+        [body.data_agendamento, body.servico, body.barbeiro_id, body.cliente_id]
+    )
+
+    return reply.status(201).send({ message: 'Agendamento cadastrado!' })
+})
+// <<<
+
+O PUT recebe SÓ a data nova e muda só essa coluna (critério 7.2):
+
+// >>> server.js
+// Atualiza SÓ a data do agendamento
+servidor.put('/agendamentos/:id', { preHandler: autenticar }, async (request, reply) => {
+    const body = request.body
+    const id = request.params.id
+
+    if (!body || !body.data_agendamento) {
+        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
+    }
+
+    const resultado = await sql.query(
+        'UPDATE agendamento SET data_agendamento = $1 WHERE id = $2',
+        [body.data_agendamento, id]
+    )
+
+    if (resultado.rowCount === 0) {
+        return reply.status(404).send({ message: 'Agendamento não existe!' })
+    }
+
+    return reply.status(200).send({ message: 'Data do agendamento atualizada!' })
+})
+// <<<
+
+// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe (404).
+// Sempre use WHERE no UPDATE. Sem o WHERE, TODAS as linhas da tabela mudam de data.
+// (Se ainda não fez a função autenticar, tire o { preHandler: autenticar } por enquanto.)
+
+### Testes no referencias.http
+
+POST http://localhost:6767/agendamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_agendamento": "2026-11-21T15:00",
+    "servico": "Barba",
+    "barbeiro_id": 1,
+    "cliente_id": 1
+}
+
+### Atualizar a data do agendamento 1 (depois rode o GET e veja a ordem mudar)
+PUT http://localhost:6767/agendamentos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_agendamento": "2026-11-17T08:30"
+}
+
+
+// ### Revisão pela lista de verificação (na API)
+
+[ ] 6.1 POST /clientes grava o cliente com o barbeiro e recusa barbeiro que não existe (400)
+[ ] 7.1 GET /agendamentos devolve os agendamentos em ordem de data (rota em #1_busca_e_JOIN.txt)
+[ ] 7.2 PUT /agendamentos/:id muda só a data, e responde 404 se o id não existe
+
+
+// ### Erros comuns
+
+- "Barbeiro informado não existe!" (400): o barbeiro_id enviado não está na tabela barbeiro. Confira com SELECT * FROM barbeiro.
+- "violates foreign key constraint" (500): faltou a conferência antes do INSERT, ou o cliente_id/barbeiro_id não existe.
+- 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
+- Atualizou a data e TODOS os agendamentos mudaram: faltou o WHERE no UPDATE.
+- "Agendamento não existe!" (404): o id que está na URL do PUT não existe.
+- A data mudou de horário (algumas horas a mais ou a menos): o JavaScript converteu o fuso. Envie a data como veio do input
+  (2026-11-17T08:30) e deixe o Postgres guardar como TIMESTAMP, sem timezone.

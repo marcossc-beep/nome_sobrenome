@@ -1,8 +1,12 @@
-// ### Agendamentos: listar ordenado por data e atualizar a data (API e tela)
+// ### Tela de Agendamentos: listar ordenado por data e atualizar a data
 //
 // Critérios da lista de verificação que esta documentação ajuda a cumprir:
 //   7.1 Listar os agendamentos ordenados por data (peso 3)
 //   7.2 Atualizar a data de um agendamento (peso 2)
+//
+// Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.txt) e as rotas de agendamento na API.
+// Rotas da API que esta tela usa: GET /agendamentos, POST /agendamentos, PUT /agendamentos/:id,
+// GET /barbeiros e GET /clientes (veja ../backend/#1_busca_e_JOIN.txt e ../backend/#2_cliente_e_agendamento_API.txt).
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código.
 // As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
@@ -18,83 +22,7 @@
   (a função formatarData do scripts.js faz isso).
 
 
-// ### Passo 1: API (rotas de agendamento)
-
-O GET /agendamentos (JOIN triplo e ORDER BY data_agendamento) é o critério 7.1.
-Ele está explicado em #4_filtros_e_JOIN.txt. Aqui ficam as duas rotas que faltam.
-
-O POST existe para você conseguir criar agendamentos de teste pela tela:
-
-// >>> server.js
-servidor.post('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
-    const body = request.body
-
-    if (!body || !body.data_agendamento || !body.servico || !body.barbeiro_id || !body.cliente_id) {
-        return reply.status(400).send({ message: 'Data, serviço, barbeiro e cliente são obrigatórios!' })
-    }
-
-    await sql.query(
-        'INSERT INTO agendamento (data_agendamento, servico, barbeiro_id, cliente_id) VALUES ($1, $2, $3, $4)',
-        [body.data_agendamento, body.servico, body.barbeiro_id, body.cliente_id]
-    )
-
-    return reply.status(201).send({ message: 'Agendamento cadastrado!' })
-})
-// <<<
-
-O PUT recebe SÓ a data nova e muda só essa coluna (critério 7.2):
-
-// >>> server.js
-// Atualiza SÓ a data do agendamento
-servidor.put('/agendamentos/:id', { preHandler: autenticar }, async (request, reply) => {
-    const body = request.body
-    const id = request.params.id
-
-    if (!body || !body.data_agendamento) {
-        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
-    }
-
-    const resultado = await sql.query(
-        'UPDATE agendamento SET data_agendamento = $1 WHERE id = $2',
-        [body.data_agendamento, id]
-    )
-
-    if (resultado.rowCount === 0) {
-        return reply.status(404).send({ message: 'Agendamento não existe!' })
-    }
-
-    return reply.status(200).send({ message: 'Data do agendamento atualizada!' })
-})
-// <<<
-
-// resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe (404).
-// Sempre use WHERE no UPDATE. Sem o WHERE, TODAS as linhas da tabela mudam de data.
-// (Se ainda não fez a função autenticar, tire o { preHandler: autenticar } por enquanto.)
-
-### Testes no referencias.http
-
-POST http://localhost:6767/agendamentos
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-    "data_agendamento": "2026-11-21T15:00",
-    "servico": "Barba",
-    "barbeiro_id": 1,
-    "cliente_id": 1
-}
-
-### Atualizar a data do agendamento 1 (depois rode o GET e veja a ordem mudar)
-PUT http://localhost:6767/agendamentos/1
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-    "data_agendamento": "2026-11-17T08:30"
-}
-
-
-// ### Passo 2: o esqueleto da tela (FRONT/agendamentos.html)
+// ### Passo 1: o esqueleto da tela (FRONT/agendamentos.html)
 
 Crie o arquivo FRONT/agendamentos.html. O topo, com os links e o botão Sair:
 
@@ -137,7 +65,7 @@ A div onde a lista aparece, o início do script e o fim do arquivo:
 // <<<
 
 
-// ### Passo 3: listar os agendamentos (critério 7.1)
+// ### Passo 2: listar os agendamentos (critério 7.1)
 
 Cole DENTRO do <script>, abaixo do protegerPagina():
 
@@ -171,12 +99,12 @@ E a chamada, SEMPRE na última linha do script (acima do </script>):
 // - Cada campo precisa ter o mesmo nome do apelido (AS) usado no SELECT da API (ag.barbeiro_nome, ag.cliente_nome...).
 // - formatarData() vem do scripts.js.
 // - Em cada item há um campo de data e um botão. O id do campo usa o id do agendamento (data-${ag.id}),
-//   assim o botão sabe qual campo ler. O botão só funciona depois do passo 4.
+//   assim o botão sabe qual campo ler. O botão só funciona depois do passo 3.
 //
 // Teste: recarregue a página. Os agendamentos aparecem do mais antigo para o mais novo.
 
 
-// ### Passo 4: atualizar a data (critério 7.2)
+// ### Passo 3: atualizar a data (critério 7.2)
 
 Cole ACIMA da linha carregarAgendamentos() do final:
 
@@ -203,7 +131,7 @@ Cole ACIMA da linha carregarAgendamentos() do final:
 // Teste: escolha uma data bem antiga em um agendamento e clique em atualizar data. Ele sobe para o topo da lista.
 
 
-// ### Passo 5: criar agendamentos pela tela (para testar)
+// ### Passo 4: criar agendamentos pela tela (para testar)
 
 Os campos e o botão. Cole no HTML ACIMA do comentário "Listagem ordenada por data...":
 
@@ -225,7 +153,7 @@ Os campos e o botão. Cole no HTML ACIMA do comentário "Listagem ordenada por d
 // <<<
 
 No script, cole ACIMA da linha carregarAgendamentos() do final. Os selects funcionam como na tela de clientes
-(#5_dropdown_FK.txt): a opção mostra o nome e o value é o id.
+(#3_cliente_dropdown.txt): a opção mostra o nome e o value é o id.
 
 // >>> FRONT/agendamentos.html
         async function carregarSelects() {
@@ -282,4 +210,4 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
   (2026-11-17T08:30) e deixe o Postgres guardar como TIMESTAMP, sem timezone.
 - Atualizou e nada mudou: o botão está lendo o campo errado. Confira se o id do input é data-${ag.id}.
 - "Escolha a nova data!": o campo da linha está vazio, o usuário precisa preencher antes de clicar.
-- "atualizarData is not defined": a função ainda não foi colada (passo 4), ou foi colada fora do <script>.
+- "atualizarData is not defined": a função ainda não foi colada (passo 3), ou foi colada fora do <script>.
