@@ -1,88 +1,75 @@
 // ### Busca por termo, JOIN e ordenação (API)
 //
-// Critérios que esta documentação ajuda a cumprir:
+// Critérios da lista de verificação que esta documentação ajuda a cumprir:
 //   5.2 Busca com no mínimo um termo (peso 3)
 //   6.1 Listagem de clientes mostrando o barbeiro (apoio ao critério 6.1)
 //   7.1 Listar agendamentos ordenados por data com dados do barbeiro e do cliente (peso 3)
 //
-// OBS: as linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
-// Não copie essas linhas, copie só o que está entre elas.
-//
-// As rotas abaixo já aparecem com { preHandler: autenticar }. Se você ainda não criou a função autenticar
-// (#3_criptografia_e_login.txt), deixe essa parte de fora por enquanto e acrescente depois.
+// As rotas abaixo já aparecem com { preHandler: autenticar }, a função definida em #3_criptografia_e_login.txt.
+// Enquanto você não criar a função autenticar, deixe essa parte de fora das rotas.
 
 
-// ### PARTE 1: Busca por termo
+// ### Busca por termo
 
 A busca tem 3 pedaços que se encaixam:
 1. No SQL: filtrar com ILIKE e % (qualquer texto antes ou depois).
 2. Na API: receber o termo pela URL (?busca=termo) com request.query.
-3. Na tela: um formulário em que o usuário digita o termo, confirma e a tabela atualiza.
+3. Na tela: um formulário em que o usuário digita o termo, confirma e a lista atualiza.
 
-// ### SQL primeiro (teste no pgAdmin antes de programar)
+// SQL (teste no pgAdmin antes de programar)
 
-SELECT id, nome, email, telefone FROM barbeiro
-WHERE nome ILIKE '%raf%' OR email ILIKE '%raf%'
+SELECT id, nome FROM barbeiro
+WHERE nome ILIKE '%ana%'
 ORDER BY id;
 
 - ILIKE ignora maiúsculas e minúsculas (LIKE comum diferencia).
-- O % vale por "qualquer coisa": '%raf%' acha "Rafael", "rafa", "Raffaela"...
-- OR: o termo pode estar no nome OU no e-mail. A busca precisa de no mínimo UM termo/campo (critério 5.2).
+- O % vale por "qualquer coisa": '%ana%' acha "Ana Souza", "Mariana", "Juliana"...
+- A busca precisa de no mínimo UM termo/campo (critério 5.2): aqui é o nome.
 - Nunca monte o SQL juntando texto com +. Use $1 (evita SQL injection).
 
+// API: o termo vem na URL
+//
+// Tudo que vem depois do ? na URL chega em request.query:
+//     GET http://localhost:6767/barbeiros?busca=ana        ->  request.query.busca === 'ana'
+// Se não vier busca (GET /barbeiros), request.query.busca é undefined e listamos todos.
 
-// ### API: query params
-
-Tudo que vem depois do ? na URL chega em request.query:
-
-    GET http://localhost:6767/barbeiros?busca=raf        ->  request.query.busca === 'raf'
-
-Se não vier busca (GET /barbeiros), request.query.busca é undefined e listamos todos.
-
-// >>> server.js
 servidor.get('/barbeiros', { preHandler: autenticar }, async (request, reply) => {
     const busca = request.query.busca
 
     if (busca) {
-        const resultado = await sql.query(
-            'SELECT id, nome, email, telefone FROM barbeiro WHERE nome ILIKE $1 OR email ILIKE $1 ORDER BY id',
+        const barbeiros = await sql.query(
+            'SELECT id, nome FROM barbeiro WHERE nome ILIKE $1 ORDER BY id',
             [`%${busca}%`]
         )
-        return resultado.rows
+        return reply.send(barbeiros.rows)
     }
 
-    const resultado = await sql.query('SELECT id, nome, email, telefone FROM barbeiro ORDER BY id')
-    return resultado.rows
+    const barbeiros = await sql.query('SELECT id, nome FROM barbeiro ORDER BY id')
+    reply.send(barbeiros.rows)
 })
-// <<<
 
 // O valor do $1 é `%${busca}%`: o termo digitado com um % de cada lado.
-// O SELECT lista as colunas uma a uma (sem cpf e senha), assim o hash nunca sai da API.
+// O SELECT lista as colunas uma a uma (só id e nome): o cpf e a senha, que estão em hash, nunca saem da API.
 
 ### Testes no referencias.http
 
-GET http://localhost:6767/barbeiros?busca=raf
+GET http://localhost:6767/barbeiros?busca=ana
 Authorization: Bearer {{token}}
 
 ### Busca que não acha nada (esperado: lista vazia [])
 GET http://localhost:6767/barbeiros?busca=zzz
 Authorization: Bearer {{token}}
 
-
-// ### A tela de busca (está na documentação do front-end)
-
-O código do formulário e das funções buscar() e limparBusca() está em ../frontend/#2_crud_barbeiro.txt.
-Resumo do caminho: o botão Buscar chama buscar(event) > carregar(termo) > api('/barbeiros?busca=termo')
-> a tabela é montada de novo só com o resultado.
-encodeURIComponent(busca) protege o termo na URL (espaços e acentos viram códigos seguros).
+// A tela de busca (formulário, botão buscar e limpar) está na documentação do front-end: ../frontend/#2_crud_barbeiro.txt.
+// encodeURIComponent(busca) protege o termo na URL (espaços e acentos viram códigos seguros).
 
 
-// ### PARTE 2: JOIN (juntar tabelas)
+// ### JOIN (juntar tabelas)
 
 Por que precisamos: cliente guarda só o barbeiro_id (um número). Para mostrar o NOME do barbeiro
 precisamos juntar as duas tabelas pela chave estrangeira.
 
-// ### JOIN simples: cliente + barbeiro
+// JOIN simples: cliente + barbeiro
 
 SELECT cliente.*, barbeiro.nome AS barbeiro_nome
 FROM cliente
@@ -92,17 +79,15 @@ ORDER BY cliente.id;
 - INNER JOIN tabela ON chave_estrangeira = chave_primaria.
 - AS dá um apelido à coluna. Sem o AS, o resultado teria duas colunas "nome" e uma sobrescreveria a outra no JSON.
 
-// >>> server.js
 servidor.get('/clientes', { preHandler: autenticar }, async (request, reply) => {
-    const resultado = await sql.query(`
+    const clientes = await sql.query(`
         SELECT cliente.*, barbeiro.nome AS barbeiro_nome
         FROM cliente
         INNER JOIN barbeiro ON cliente.barbeiro_id = barbeiro.id
         ORDER BY cliente.id
     `)
-    return resultado.rows
+    reply.send(clientes.rows)
 })
-// <<<
 
 // O SQL fica entre crases ( ` ) para poder quebrar em várias linhas.
 
@@ -114,41 +99,38 @@ Então juntamos as 3 tabelas e ordenamos pela data.
 
 SELECT
     agendamento.id,
-    agendamento.data_agendamento,
-    agendamento.servico,
+    agendamento.data_hora,
+    barbeiro.id AS barbeiro_id,
     barbeiro.nome AS barbeiro_nome,
-    cliente.nome AS cliente_nome
+    cliente.id AS cliente_id,
+    cliente.nome AS cliente_nome,
+    cliente.cpf AS cliente_cpf
 FROM agendamento
 INNER JOIN barbeiro ON agendamento.barbeiro_id = barbeiro.id
 INNER JOIN cliente ON agendamento.cliente_id = cliente.id
-ORDER BY agendamento.data_agendamento ASC;
+ORDER BY agendamento.data_hora ASC;
 
 - ORDER BY coluna ASC = do menor para o maior (datas mais antigas primeiro).
-- Para "todos os dados", liste todas as colunas que interessam de cada tabela, cada uma com seu apelido.
+- Para "todos os dados", liste as colunas que interessam de cada tabela, cada uma com seu apelido.
+- O CPF e a senha do barbeiro ficam de fora porque estão em hash.
 
-// >>> server.js
 servidor.get('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
-    const resultado = await sql.query(`
+    const agendamentos = await sql.query(`
         SELECT
             agendamento.id,
-            agendamento.data_agendamento,
-            agendamento.servico,
+            agendamento.data_hora,
             barbeiro.id AS barbeiro_id,
             barbeiro.nome AS barbeiro_nome,
-            barbeiro.email AS barbeiro_email,
-            barbeiro.telefone AS barbeiro_telefone,
             cliente.id AS cliente_id,
             cliente.nome AS cliente_nome,
-            cliente.telefone AS cliente_telefone,
-            cliente.estilo_corte AS cliente_estilo_corte
+            cliente.cpf AS cliente_cpf
         FROM agendamento
         INNER JOIN barbeiro ON agendamento.barbeiro_id = barbeiro.id
         INNER JOIN cliente ON agendamento.cliente_id = cliente.id
-        ORDER BY agendamento.data_agendamento ASC
+        ORDER BY agendamento.data_hora ASC
     `)
-    return resultado.rows
+    reply.send(agendamentos.rows)
 })
-// <<<
 
 ### Testes no referencias.http
 
@@ -163,7 +145,7 @@ Authorization: Bearer {{token}}
 // ### Erros comuns
 
 - A busca sempre devolve tudo: o ? está faltando na URL ou o nome do parâmetro é diferente (request.query.busca x ?termo=).
-- A busca não acha "rafael" digitando "Rafael": usou LIKE em vez de ILIKE.
+- A busca não acha "ana" digitando "Ana": usou LIKE em vez de ILIKE.
 - "column reference "id" is ambiguous": duas tabelas têm a coluna id. Escreva tabela.coluna (agendamento.id).
 - Nome do cliente e do barbeiro aparecem iguais: faltou o AS (apelido) em um dos dois.
 - "relation agendamento does not exist": o script saep_db.sql não foi rodado no banco certo (saep_db).
