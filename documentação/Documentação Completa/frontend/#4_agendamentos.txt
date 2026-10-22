@@ -1,9 +1,5 @@
 // ### Tela de Agendamentos: listar ordenado por data e atualizar a data
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   7.1 Listar os agendamentos ordenados por data (peso 3)
-//   7.2 Atualizar a data de um agendamento (peso 2)
-//
 // Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.txt) e as rotas de agendamento na API.
 // Rotas da API que esta tela usa: GET /agendamentos, POST /agendamentos, PUT /agendamentos/:id,
 // GET /barbeiros e GET /clientes (veja ../backend/#1_busca_e_JOIN.txt e ../backend/#2_cliente_e_agendamento_API.txt).
@@ -65,7 +61,7 @@ A div onde a lista aparece, o início do script e o fim do arquivo:
 // <<<
 
 
-// ### Passo 2: listar os agendamentos (critério 7.1)
+// ### Passo 2: listar os agendamentos
 
 Cole DENTRO do <script>, abaixo do protegerPagina():
 
@@ -95,7 +91,7 @@ E a chamada, SEMPRE na última linha do script (acima do </script>):
 // <<<
 
 // - A API já devolve os agendamentos ordenados por data. O front só mostra na ordem que chegou.
-// - Mostramos TODOS os dados do barbeiro e do cliente, como o caderno pede.
+// - Mostramos TODOS os dados do barbeiro e do cliente.
 // - Cada campo precisa ter o mesmo nome do apelido (AS) usado no SELECT da API (ag.barbeiro_nome, ag.cliente_nome...).
 // - formatarData() vem do scripts.js.
 // - Em cada item há um campo de data e um botão. O id do campo usa o id do agendamento (data-${ag.id}),
@@ -104,7 +100,7 @@ E a chamada, SEMPRE na última linha do script (acima do </script>):
 // Teste: recarregue a página. Os agendamentos aparecem do mais antigo para o mais novo.
 
 
-// ### Passo 3: atualizar a data (critério 7.2)
+// ### Passo 3: atualizar a data
 
 Cole ACIMA da linha carregarAgendamentos() do final:
 
@@ -196,10 +192,10 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
 // Teste: crie um agendamento escolhendo data, serviço, barbeiro e cliente. Ele aparece na lista, na posição da data.
 
 
-// ### Revisão pela lista de verificação
+// ### Conferência final
 
-[ ] 7.1 a lista mostra os agendamentos em ordem de data, com dados do barbeiro e do cliente (peso 3)
-[ ] 7.2 escolher uma nova data, clicar em atualizar data e a lista mostra a data nova, e o banco guarda (peso 2)
+[ ] a lista mostra os agendamentos em ordem de data, com dados do barbeiro e do cliente
+[ ] escolher uma nova data, clicar em atualizar data e a lista mostra a data nova, e o banco guarda
 
 
 // ### Erros comuns

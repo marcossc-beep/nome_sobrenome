@@ -21,7 +21,7 @@ const sql = new Pool({
     port: 5432,  // porta que o banco está rodando normalmente é 5432
     database: "saep_db" // Nome do banco de dados
 })
-// OBS na prova: o banco é o saep_db (criado no pgAdmin) e usuário, senha e porta são os do Postgres da sua máquina.
+// OBS: o banco é o saep_db (criado no pgAdmin) e usuário, senha e porta são os do Postgres da sua máquina.
 // OBS: Essa variável chamada sql será usada para conectar a api ao banco de dados dessa forma:  
 // sql.query( 'aqui vai a query SQL' , [ 'Aqui vão ficar os valores que serão usados dentro da query' ] ) 
 
@@ -145,10 +145,6 @@ servidor.post('/usuarios', async (request, reply) => {
 servidor.post('/salas', async (request, reply) => {
     const body = request.body
 
-    if (!body || !body.nome || !body.bloco || !body.usuario_id) {
-        return reply.status(400).send({ message: "nome, bloco e usuario_id são obrigatórios!" })
-    }
-
     const usuario = await sql.query('SELECT id FROM usuario WHERE id = $1', [body.usuario_id])
     if (usuario.rows.length === 0) {
         return reply.status(400).send({ message: "Usuário informado não existe!" })
@@ -169,19 +165,12 @@ servidor.post('/salas', async (request, reply) => {
 // o id é o que será editado e o body é o que será inserido no lugar.
 // normalmente enviamos o id na propria url da requisição por isso :id
 
+// Os números $1, $2, $3... são só a posição de cada valor no array do segundo parâmetro do sql.query.
+// Não precisam seguir a ordem das colunas. Aqui o id é sempre o $1 (WHERE id = $1) para ficar fácil de lembrar.
+
 servidor.put('/usuarios/:id', async (request, reply) => {
     const body = request.body;
     const id = request.params.id;
-
-    if (!body || !body.nome || !body.cpf || !body.senha) {
-        return reply.status(400).send({
-            message: "nome, cpf e senha são obrigatórios!"
-        })
-    } else if (!id) {
-        return reply.status(400).send({
-            message: "Faltou o ID!"
-        })
-    }
 
     const usuario = await sql.query('select * from usuario where id = $1', [id])  
     if (usuario.rows.length === 0) {
@@ -190,7 +179,7 @@ servidor.put('/usuarios/:id', async (request, reply) => {
         })
     }
 
-    const resultado = await sql.query('UPDATE usuario SET nome = $1, cpf = $2, senha = $3 WHERE id = $4', [body.nome, body.cpf, body.senha, id])      
+    const resultado = await sql.query('UPDATE usuario SET nome = $2, cpf = $3, senha = $4 WHERE id = $1', [id, body.nome, body.cpf, body.senha])      
     reply.status(201).send({message: `usuario ${body.nome} alterado!`})          
 })
 
@@ -204,13 +193,9 @@ servidor.put('/reunioes/:id', async (request, reply) => {
     const body = request.body
     const id = request.params.id
 
-    if (!body || !body.data_hora) {
-        return reply.status(400).send({ message: "A nova data é obrigatória!" })
-    }
-
     const resultado = await sql.query(
-        'UPDATE reuniao SET data_hora = $1 WHERE id = $2',
-        [body.data_hora, id]
+        'UPDATE reuniao SET data_hora = $2 WHERE id = $1',
+        [id, body.data_hora]
     )
 
     if (resultado.rowCount === 0) {

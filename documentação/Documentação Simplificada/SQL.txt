@@ -9,9 +9,6 @@ Para entender como as informações ficam guardadas:
 
 O SQL (Structured Query Language) é a linguagem que usamos para criar as tabelas, inserir, atualizar, consultar e deletar registros no PostgreSQL via PGAdmin.
 
-Os exemplos deste arquivo são de OUTRO sistema (usuários, salas e reuniões). Na prova você faz a mesma coisa com as tabelas do caderno.
-As linhas " e " só marcam onde o código começa e termina. Não copie essas linhas.
-
 
 // ### Tipos de Dados Mais Utilizados
 
@@ -39,9 +36,9 @@ No pgAdmin, crie o banco e abra o Query Tool DENTRO dele (botão direito no banc
     CREATE DATABASE saep_db;
 
 
-// ### Criação de Tabelas (DDL para Prova Prática)
+// ### Criação de Tabelas (DDL)
 
-Para garantir a pontuação no banco de dados, o script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
+O script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
 
 -- 1. Tabela Base: USUARIO (Não depende de nenhuma outra tabela)
 
@@ -75,7 +72,7 @@ CREATE TABLE reuniao (
 //   "a coluna usuario_id é um número obrigatório que precisa existir na coluna id da tabela usuario".
 
 
-// ### População Inicial do Banco (REQUISITO DA PROVA: Mínimo 3 registros por tabela)
+// ### População Inicial do Banco (exemplo com 3 registros por tabela)
 
 É obrigatório inserir no mínimo 3 registros em TODAS as tabelas criadas no script `.sql`, respeitando a ordem das chaves estrangeiras.
 - A lista de colunas e os valores precisam estar na mesma ordem e na mesma quantidade.

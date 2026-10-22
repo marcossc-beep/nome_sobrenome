@@ -1,17 +1,11 @@
 // ### Criptografia no back-end (bcrypt + JWT) e rota de login
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   3.1 Autenticação com login e senha do banco (peso 1)
-//   3.2 Sessão do usuário autenticado com tempo de expiração (peso 3)
-//   3.3 Validação em caso de falha de autenticação (peso 2)
-//   4.1 Nome do usuário autenticado disponível para a tela principal (peso 2)
-//   5.4 Criptografar pelo menos a senha e o CPF do barbeiro no banco (peso 3)
 
 
 // ### O problema
 
 Se a senha e o CPF ficam escritos em texto puro no banco, qualquer pessoa que acessar o banco lê tudo.
-O caderno de prova fala em LGPD: dados pessoais precisam ficar protegidos.
+A LGPD diz que dados pessoais precisam ficar protegidos.
 Usamos duas ferramentas:
 - bcrypt: transforma a senha e o CPF em um "embaralhado" que não volta mais (hash).
 - JWT: um "crachá" digital que o servidor entrega no login e que tem prazo de validade.
@@ -43,9 +37,9 @@ Depois do login o servidor devolve um token. Em toda requisição seguinte o fro
 Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
 - dados (payload): o que guardamos dentro, como id e nome. NUNCA a senha.
 - assinatura: garante que ninguém alterou o token.
-- exp: o horário em que o token vence. É isso que cumpre o critério 3.2 (sessão com expiração).
+- exp: o horário em que o token vence. É isso que dá expiração à sessão.
 
-Na prova a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
+Aqui a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
 
 
 // ### Imports e configuração do JWT
@@ -91,11 +85,11 @@ async function autenticar(request, reply) {
 
 // ### Rota POST /login (cpf e senha)
 
-// Regras que o critério 3.3 espera:
+// Regras do login:
 // - 400 quando faltar cpf ou senha.
 // - 401 quando o CPF não existir OU a senha estiver errada, com a MESMA mensagem nos dois casos
 //   (assim ninguém descobre quais CPFs existem no sistema).
-// - Se estiver certo: gerar o token e devolver também o nome do usuário (critério 4.1).
+// - Se estiver certo: gerar o token e devolver também o nome do usuário.
 
 servidor.post('/login', async (request, reply) => {
     const body = request.body
@@ -133,7 +127,7 @@ servidor.post('/login', async (request, reply) => {
 // A resposta leva 3 coisas que o front guarda: token, expira (quando vence) e usuario (com o nome).
 
 
-// ### Criptografando o CPF e a senha do barbeiro (critério 5.4)
+// ### Criptografando o CPF e a senha do barbeiro
 
 // O POST e o PUT usam bcrypt.hash antes de gravar.
 // No PUT, o CPF e a senha só são trocados se vierem preenchidos, porque na tela de edição
@@ -141,10 +135,6 @@ servidor.post('/login', async (request, reply) => {
 
 servidor.post('/barbeiros', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
-
-    if (!body || !body.nome || !body.cpf || !body.senha) {
-        return reply.status(400).send({ message: 'nome, cpf e senha são obrigatórios!' })
-    }
 
     // LGPD: CPF e senha são salvos criptografados (hash bcrypt)
     const cpfHash = await bcrypt.hash(body.cpf, 10)
@@ -162,25 +152,21 @@ servidor.put('/barbeiros/:id', { preHandler: autenticar }, async (request, reply
     const body = request.body
     const id = request.params.id
 
-    if (!body || !body.nome) {
-        return reply.status(400).send({ message: 'nome é obrigatório!' })
-    }
-
     const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [id])
     if (barbeiro.rows.length === 0) {
         return reply.status(404).send({ message: 'Barbeiro não existe!' })
     }
 
-    await sql.query('UPDATE barbeiro SET nome = $1 WHERE id = $2', [body.nome, id])
+    await sql.query('UPDATE barbeiro SET nome = $2 WHERE id = $1', [id, body.nome])
 
     // CPF e senha só mudam se forem enviados (e continuam criptografados)
     if (body.cpf) {
         const cpfHash = await bcrypt.hash(body.cpf, 10)
-        await sql.query('UPDATE barbeiro SET cpf = $1 WHERE id = $2', [cpfHash, id])
+        await sql.query('UPDATE barbeiro SET cpf = $2 WHERE id = $1', [id, cpfHash])
     }
     if (body.senha) {
         const senhaHash = await bcrypt.hash(body.senha, 10)
-        await sql.query('UPDATE barbeiro SET senha = $1 WHERE id = $2', [senhaHash, id])
+        await sql.query('UPDATE barbeiro SET senha = $2 WHERE id = $1', [id, senhaHash])
     }
 
     reply.status(200).send({ message: `barbeiro ${body.nome} alterado!` })

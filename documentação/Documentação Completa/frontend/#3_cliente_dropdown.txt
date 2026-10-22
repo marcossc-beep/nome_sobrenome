@@ -1,8 +1,5 @@
 // ### Tela de Clientes: cadastrar um cliente associado a um barbeiro (select com chave estrangeira)
 //
-// Critério da lista de verificação que esta documentação ajuda a cumprir:
-//   6.1 Inserção de um novo cliente associando-o a um barbeiro (peso 3)
-//
 // Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.txt) e as rotas de cliente na API.
 // Rotas da API que esta tela usa: GET /barbeiros, GET /clientes e POST /clientes
 // (veja ../backend/#1_busca_e_JOIN.txt e ../backend/#2_cliente_e_agendamento_API.txt).
@@ -14,7 +11,7 @@
 
 // ### A ideia
 
-O caderno diz: "Ao cadastrar um novo cliente, o usuário deve associá-lo a um barbeiro."
+Ao cadastrar um novo cliente, ele deve ser associado a um barbeiro.
 No banco isso é a chave estrangeira cliente.barbeiro_id.
 O usuário NÃO deve digitar o número do barbeiro. Ele escolhe o NOME numa lista (<select>)
 e o sistema envia o ID escondido:
@@ -174,9 +171,9 @@ E, por último no script (acima do </script>), chame as duas funções que carre
 // O barbeiro_id chega no back como texto ("1"). Está certo, o Postgres converte sozinho.
 
 
-// ### Revisão pela lista de verificação
+// ### Conferência final
 
-[ ] 6.1 cadastrar um cliente escolhendo o barbeiro na lista, e o cliente aparece com o nome do barbeiro (peso 3)
+[ ] cadastrar um cliente escolhendo o barbeiro na lista, e o cliente aparece com o nome do barbeiro
 [ ] sem escolher o barbeiro, o cadastro é bloqueado
 
 

@@ -1,13 +1,5 @@
 // ### Começando o front-end: CORS, fetch, tela de login, sessão e tela principal
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   3.1 Login redireciona para a tela principal (peso 1)
-//   3.2 Sessão do usuário autenticado com tempo de expiração (peso 3)
-//   3.3 Validação em caso de falha no login (peso 2)
-//   4.1 Nome do usuário autenticado exibido na principal (peso 2)
-//   4.2 Meio para sair do sistema (peso 1)
-//   4.3 Acesso a Barbeiro, Cliente e Agendamento a partir da principal (peso 1)
-//
 // Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#3_criptografia_e_login.txt).
 // Rotas da API que as telas deste arquivo usam: POST /login.
 // Para treinar só o front-end, a API precisa estar rodando com as rotas citadas em cada arquivo.
@@ -62,7 +54,7 @@ servidor.register(cors, {
    (Dar dois cliques no arquivo também funciona, mas o Live Server recarrega sozinho quando você salva.)
 3. Para ver erros do JavaScript: F12 > aba Console. Para ver as chamadas à API: F12 > aba Network.
 
-Páginas do front desta prova (pasta FRONT):
+Páginas do front (pasta FRONT):
 
     index.html         login
     principal.html     tela principal
@@ -149,8 +141,8 @@ function formatarData(data) {
 // <<<
 
 // O que cada função faz:
-//   sessaoValida()   -> critério 3.2: a sessão acaba quando o horário "expira" passa
-//   sair()           -> critério 4.2: apaga os dados da sessão e volta ao login
+//   sessaoValida()   -> a sessão acaba quando o horário "expira" passa
+//   sair()           -> apaga os dados da sessão e volta ao login
 //   protegerPagina() -> impede abrir as telas sem estar logado
 //   api()            -> é o fetch que você já conhece, só que já manda o token no header Authorization
 //                       (as rotas protegidas da API exigem) e, se a API responder 401 (token vencido), faz sair()
@@ -159,10 +151,10 @@ function formatarData(data) {
 
 // ### Passo 5: tela de login (FRONT/index.html)
 
-Critério 3.3 (validação em caso de falha): fazemos duas.
+Validação em caso de falha no login: fazemos duas.
 - no front: campos vazios;
 - vinda do back: a mensagem da API ("Usuário ou senha inválidos!") aparece na tela.
-Critério 3.1: se der certo, guarda a sessão e vai para a principal.
+Se der certo, guarda a sessão e vai para a principal.
 
 Primeiro a parte visual. Salve e veja no navegador (os botões ainda não fazem nada):
 
@@ -236,7 +228,7 @@ Agora a parte que faz funcionar, logo abaixo (fecha o arquivo):
 // Pontos para entender:
 // - O login não usa a função api(), porque ainda não existe token. Ele usa o fetch direto.
 // - ${API} vem do scripts.js, que foi carregado na linha de cima.
-// - window.location.href = 'principal.html' é o que "redireciona" (critério 3.1).
+// - window.location.href = 'principal.html' é o que "redireciona".
 // - Teste: campos vazios, senha errada (a mensagem da API aparece em vermelho) e senha certa.
 //   No F12 > Application > Local Storage você vê token, expira e usuario guardados.
 // - A principal.html ainda não existe: depois do login certo a página some. Siga para o passo 6.
@@ -244,11 +236,11 @@ Agora a parte que faz funcionar, logo abaixo (fecha o arquivo):
 
 // ### Passo 6: tela principal (FRONT/principal.html)
 
-Critérios 4.1, 4.2 e 4.3:
+O que a tela principal tem:
 - mostrar o nome de quem está logado (vem do localStorage, guardado no login);
 - botão Sair que apaga a sessão;
 - links para Barbeiros, Clientes e Agendamentos.
-E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a sessão venceu.
+E protegerPagina() manda de volta ao login quando a sessão venceu.
 
 // >>> FRONT/principal.html
 <!DOCTYPE html>
@@ -304,7 +296,7 @@ E o critério 3.2 no front: protegerPagina() manda de volta ao login quando a se
 //     </html>
 
 
-// ### Passo 7: ver a sessão expirando (critério 3.2 funcionando)
+// ### Passo 7: ver a sessão expirando
 
 1. No server.js troque expiresIn: '30m' por '1m'.
 2. Faça login pelo front e entre na principal.
@@ -382,14 +374,14 @@ button {
 // <<<
 
 
-// ### Revisão pela lista de verificação
+// ### Conferência final
 
-[ ] 3.1 login com e-mail e senha do banco leva para a principal (peso 1)
-[ ] 3.2 a sessão tem prazo: depois do tempo, a tela volta ao login (peso 3)
-[ ] 3.3 campos vazios e senha errada mostram mensagem na tela (peso 2)
-[ ] 4.1 a principal mostra o nome de quem está logado (peso 2)
-[ ] 4.2 o botão Sair desloga e volta ao login (peso 1)
-[ ] 4.3 a principal tem links para Barbeiros, Clientes e Agendamentos (peso 1)
+[ ] login com e-mail e senha do banco leva para a principal
+[ ] a sessão tem prazo: depois do tempo, a tela volta ao login
+[ ] campos vazios e senha errada mostram mensagem na tela
+[ ] a principal mostra o nome de quem está logado
+[ ] o botão Sair desloga e volta ao login
+[ ] a principal tem links para Barbeiros, Clientes e Agendamentos
 
 
 // ### Erros comuns

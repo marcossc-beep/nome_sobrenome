@@ -1,10 +1,5 @@
 // ### API de cliente e de agendamento: cadastrar com chave estrangeira, editar e atualizar a data
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir (na API):
-//   6.1 Inserção de um novo cliente associando-o a um barbeiro (peso 3)
-//   7.1 Listar os agendamentos ordenados por data (peso 3): a rota GET está em #1_busca_e_JOIN.txt
-//   7.2 Atualizar a data de um agendamento (peso 2)
-//
 // As telas que usam estas rotas estão em ../frontend/#3_cliente_dropdown.txt e ../frontend/#4_agendamentos.txt.
 // As rotas levam { preHandler: autenticar } (função definida em #3_criptografia_e_login.txt).
 // Enquanto você não criar a função autenticar, deixe essa parte de fora.
@@ -12,7 +7,7 @@
 
 // ### Cliente: a ideia
 
-O caderno diz: "Ao cadastrar um novo cliente, o usuário deve associá-lo a um barbeiro."
+Ao cadastrar um novo cliente, ele deve ser associado a um barbeiro.
 No banco isso é a chave estrangeira cliente.barbeiro_id (NOT NULL: todo cliente tem barbeiro).
 O front manda o barbeiro_id no corpo do POST e a API confere se esse barbeiro existe antes de gravar.
 Sem a conferência, um barbeiro_id inexistente estoura erro de chave estrangeira no Postgres e a API responde 500.
@@ -22,10 +17,6 @@ Sem a conferência, um barbeiro_id inexistente estoura erro de chave estrangeira
 
 servidor.post('/clientes', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
-
-    if (!body || !body.nome || !body.cpf || !body.barbeiro_id) {
-        return reply.status(400).send({ message: 'nome, cpf e barbeiro_id são obrigatórios!' })
-    }
 
     // antes de gravar, confere se o barbeiro existe
     const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
@@ -45,10 +36,6 @@ servidor.put('/clientes/:id', { preHandler: autenticar }, async (request, reply)
     const body = request.body
     const id = request.params.id
 
-    if (!body || !body.nome || !body.cpf || !body.barbeiro_id) {
-        return reply.status(400).send({ message: 'nome, cpf e barbeiro_id são obrigatórios!' })
-    }
-
     const cliente = await sql.query('SELECT id FROM cliente WHERE id = $1', [id])
     if (cliente.rows.length === 0) {
         return reply.status(404).send({ message: 'Cliente não existe!' })
@@ -60,8 +47,8 @@ servidor.put('/clientes/:id', { preHandler: autenticar }, async (request, reply)
     }
 
     await sql.query(
-        'UPDATE cliente SET nome = $1, cpf = $2, barbeiro_id = $3 WHERE id = $4',
-        [body.nome, body.cpf, body.barbeiro_id, id]
+        'UPDATE cliente SET nome = $2, cpf = $3, barbeiro_id = $4 WHERE id = $1',
+        [id, body.nome, body.cpf, body.barbeiro_id]
     )
 
     reply.status(200).send({ message: `cliente ${body.nome} alterado!` })
@@ -109,14 +96,10 @@ Content-Type: application/json
 // ### Agendamento: POST, PUT (só a data) e DELETE
 
 // O agendamento tem DUAS chaves estrangeiras (barbeiro_id e cliente_id): a API confere as duas antes de gravar.
-// O GET /agendamentos (JOIN triplo e ORDER BY data_hora) é o critério 7.1 e está em #1_busca_e_JOIN.txt.
+// O GET /agendamentos (JOIN triplo e ORDER BY data_hora) está em #1_busca_e_JOIN.txt.
 
 servidor.post('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
-
-    if (!body || !body.data_hora || !body.barbeiro_id || !body.cliente_id) {
-        return reply.status(400).send({ message: 'data_hora, barbeiro_id e cliente_id são obrigatórios!' })
-    }
 
     // duas chaves estrangeiras: confere as duas antes de gravar
     const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
@@ -142,13 +125,9 @@ servidor.put('/agendamentos/:id', { preHandler: autenticar }, async (request, re
     const body = request.body
     const id = request.params.id
 
-    if (!body || !body.data_hora) {
-        return reply.status(400).send({ message: 'A nova data é obrigatória!' })
-    }
-
     const resultado = await sql.query(
-        'UPDATE agendamento SET data_hora = $1 WHERE id = $2',
-        [body.data_hora, id]
+        'UPDATE agendamento SET data_hora = $2 WHERE id = $1',
+        [id, body.data_hora]
     )
 
     if (resultado.rowCount === 0) {

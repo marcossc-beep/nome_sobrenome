@@ -1,12 +1,6 @@
 // ### Banco de dados com PostgreSQL: criar tabelas, inserir, consultar e juntar
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   1.3 Gerou o diagrama entidade relacionamento (peso 1)
-//   2.1 Criou as tabelas respeitando a chave estrangeira de cada relacionamento (peso 2)
-//   2.2 Inseriu pelo menos três registros em cada uma das tabelas (peso 1)
-//
-// Os exemplos deste arquivo usam OUTRO sistema (usuários, salas e reuniões), só para mostrar o formato.
-// Na prova você faz a mesma coisa com as tabelas do caderno (usuario, barbeiro, cliente, agendamento).
+// Os exemplos deste arquivo usam um sistema de usuários, salas e reuniões, só para mostrar o formato.
 //
 // As linhas "// >>> sql" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
@@ -156,7 +150,7 @@ INSERT INTO reuniao (data_hora, usuario_id, sala_id) VALUES
 // Dica: use datas DIFERENTES e fora de ordem. Assim, quando você ordenar por data, dá para ver a ordenação funcionando.
 // Dica: o usuario_id e o sala_id precisam existir (1, 2 ou 3 neste exemplo). Um 9 daria erro de chave estrangeira.
 
-Conferindo se ficou 3 em cada tabela (critério 2.2). Esta consulta mostra a contagem das três de uma vez:
+Conferindo se ficou 3 em cada tabela. Esta consulta mostra a contagem das três de uma vez:
 
 // >>> sql
 SELECT 'usuario' AS tabela, COUNT(*) AS registros FROM usuario
@@ -254,7 +248,7 @@ WHERE reuniao.usuario_id = 1;
 // - AS dá um apelido à coluna. Sem ele, usuario.nome e sala.nome viram duas colunas chamadas "nome" e se confundem.
 // - Escreva sempre tabela.coluna (reuniao.id, usuario.nome). Só "id" daria erro: duas tabelas têm a coluna id.
 // - O ORDER BY vem por último, depois dos JOIN.
-// - Esta consulta de 3 tabelas é a que a tela de agendamentos da prova usa (ordenada por data).
+// - Esta consulta de 3 tabelas serve para listar os agendamentos de uma tela (ordenada por data).
 
 
 // ### Passo 10: alterar dados (UPDATE)
@@ -286,12 +280,12 @@ DELETE FROM usuario WHERE id = 3;
 // Sem o ON DELETE CASCADE o resultado seria um erro:
 //   update or delete on table "usuario" violates foreign key constraint
 // porque o usuário ainda teria salas e reuniões apontando para ele.
-// Isso importa na prova: a tela de barbeiros tem o botão excluir e todo barbeiro do banco tem cliente e agendamento.
+// Isso importa quando uma tela tem o botão excluir e o registro já está ligado a outras tabelas.
 
 
-// ### Passo 12: salvando o script saep_db.sql (ENTREGA 3 da prova)
+// ### Passo 12: salvando o script saep_db.sql 
 
-O que vale na prova é o ARQUIVO saep_db.sql, não só ter rodado os comandos no pgAdmin.
+O que fica guardado é o ARQUIVO saep_db.sql, não só os comandos que você rodou no pgAdmin.
 1. Escreva os CREATE TABLE e depois os INSERT no arquivo saep_db.sql (da raiz do projeto, no VS Code).
    A ordem do arquivo é a mesma dos passos 5 e 6: todos os CREATE e depois todos os INSERT.
 2. Para testar: copie o conteúdo para o Query Tool do pgAdmin, DENTRO do banco saep_db, e execute.
@@ -307,21 +301,21 @@ DROP TABLE IF EXISTS reuniao, sala, usuario;
 Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
 
 
-// ### Passo 13: gerando o DER no pgAdmin (ENTREGA 2 da prova: der.png)
+// ### Passo 13: gerando o DER no pgAdmin (der.png)
 
 1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
 2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
 3. O diagrama mostra as tabelas e as setas das chaves estrangeiras. Confira se TODAS as tabelas aparecem
    e se cada seta liga a tabela certa (cliente > barbeiro, agendamento > barbeiro e cliente).
 4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
-5. Renomeie para der.png e coloque na raiz do projeto (a prova aceita der.png ou der.pdf).
+5. Renomeie para der.png e coloque na raiz do projeto (pode ser der.png ou der.pdf).
 
 
-// ### Revisão pela lista de verificação
+// ### Conferência final
 
-[ ] 2.1 cada relacionamento tem sua chave estrangeira (REFERENCES) e as tabelas foram criadas na ordem certa (peso 2)
-[ ] 2.2 TODAS as tabelas têm pelo menos 3 registros, conferido com a consulta de contagem (peso 1)
-[ ] 1.3 der.png mostra todas as tabelas e as ligações (peso 1)
+[ ] cada relacionamento tem sua chave estrangeira (REFERENCES) e as tabelas foram criadas na ordem certa
+[ ] TODAS as tabelas têm pelo menos 3 registros, conferido com a consulta de contagem
+[ ] der.png mostra todas as tabelas e as ligações
 [ ] o arquivo saep_db.sql roda inteiro, do zero, sem nenhum erro
 
 

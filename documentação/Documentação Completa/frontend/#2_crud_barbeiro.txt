@@ -1,12 +1,5 @@
 // ### CRUD no front-end: tela de Barbeiro (listar, cadastrar, excluir, buscar e editar)
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   5.1 Listar e excluir barbeiros cadastrados (peso 2)
-//   5.2 Busca com no mínimo um termo (peso 3)
-//   5.3 Cadastrar um novo barbeiro, gravando no banco (peso 2)
-//   5.4 CPF e senha criptografados (peso 3): quem criptografa é a API, aqui você confere o resultado
-//   5.5 Editar um barbeiro já existente (peso 3)
-//
 // Pré-requisitos: a API com as rotas de barbeiro, o scripts.js e a sessão prontos (#1_fetch_cors_login.txt).
 // Rotas da API que esta tela usa: GET /barbeiros (com ?busca=termo), POST /barbeiros, PUT /barbeiros/:id
 // e DELETE /barbeiros/:id (veja ../backend/#3_criptografia_e_login.txt e ../backend/#1_busca_e_JOIN.txt).
@@ -189,7 +182,7 @@ A primeira só limpa os campos depois de cadastrar (querySelectorAll pega todos 
 // - Depois limpamos os campos e chamamos carregar() para o novo barbeiro aparecer na lista.
 //
 // Teste: cadastre um barbeiro. Ele deve aparecer na lista.
-// Critério 5.4: abra o pgAdmin e rode SELECT * FROM barbeiro; o cpf e a senha do novo barbeiro devem estar em hash
+// Confira a criptografia: abra o pgAdmin e rode SELECT * FROM barbeiro; o cpf e a senha do novo barbeiro devem estar em hash
 // ($2b$10$...). Se estiverem em texto puro, a criptografia da API (../backend/#3_criptografia_e_login.txt) não está aplicada.
 
 
@@ -341,13 +334,13 @@ Confira se as últimas linhas do <script> são sempre estas (a chamada carregar(
 </html>
 
 
-// ### Revisão pela lista de verificação (barbeiro vale 13 pontos)
+// ### Conferência final
 
-[ ] 5.1 a lista mostra os barbeiros e o botão excluir remove (peso 2)
-[ ] 5.2 digitar um termo e a lista mostra só os que combinam (peso 3)
-[ ] 5.3 cadastrar pela tela, o barbeiro aparece na lista e fica no banco (peso 2)
-[ ] 5.4 no pgAdmin, cpf e senha do novo barbeiro estão em hash (peso 3)
-[ ] 5.5 editar, salvar, e a mudança aparece na lista e no banco (peso 3)
+[ ] a lista mostra os barbeiros e o botão excluir remove
+[ ] digitar um termo e a lista mostra só os que combinam
+[ ] cadastrar pela tela, o barbeiro aparece na lista e fica no banco
+[ ] no pgAdmin, cpf e senha do novo barbeiro estão em hash
+[ ] editar, salvar, e a mudança aparece na lista e no banco
 
 
 // ### Erros comuns

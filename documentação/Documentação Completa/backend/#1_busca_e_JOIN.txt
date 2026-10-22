@@ -1,10 +1,5 @@
 // ### Busca por termo, JOIN e ordenação (API)
 //
-// Critérios da lista de verificação que esta documentação ajuda a cumprir:
-//   5.2 Busca com no mínimo um termo (peso 3)
-//   6.1 Listagem de clientes mostrando o barbeiro (apoio ao critério 6.1)
-//   7.1 Listar agendamentos ordenados por data com dados do barbeiro e do cliente (peso 3)
-//
 // As rotas abaixo já aparecem com { preHandler: autenticar }, a função definida em #3_criptografia_e_login.txt.
 // Enquanto você não criar a função autenticar, deixe essa parte de fora das rotas.
 
@@ -24,7 +19,7 @@ ORDER BY id;
 
 - ILIKE ignora maiúsculas e minúsculas (LIKE comum diferencia).
 - O % vale por "qualquer coisa": '%ana%' acha "Ana Souza", "Mariana", "Juliana"...
-- A busca precisa de no mínimo UM termo/campo (critério 5.2): aqui é o nome.
+- A busca precisa de no mínimo UM termo/campo: aqui é o nome.
 - Nunca monte o SQL juntando texto com +. Use $1 (evita SQL injection).
 
 // API: o termo vem na URL
@@ -92,10 +87,10 @@ servidor.get('/clientes', { preHandler: autenticar }, async (request, reply) => 
 // O SQL fica entre crases ( ` ) para poder quebrar em várias linhas.
 
 
-// ### JOIN triplo: agendamento + barbeiro + cliente (critério 7.1)
+// ### JOIN triplo: agendamento + barbeiro + cliente
 
-O caderno pede: "listagem dos agendamentos ordenado por dia, trazendo TODOS os dados do barbeiro e do cliente".
-Então juntamos as 3 tabelas e ordenamos pela data.
+Exemplo: listar os agendamentos ordenados por dia, trazendo TODOS os dados do barbeiro e do cliente.
+Para isso juntamos as 3 tabelas e ordenamos pela data.
 
 SELECT
     agendamento.id,
