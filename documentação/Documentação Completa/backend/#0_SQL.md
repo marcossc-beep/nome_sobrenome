@@ -1,13 +1,16 @@
-// ### Banco de dados com PostgreSQL: criar tabelas, inserir, consultar e juntar
+# Banco de dados com PostgreSQL: criar tabelas, inserir, consultar e juntar
+
+```sql
 //
 // Os exemplos deste arquivo usam um sistema de usuários, salas e reuniões, só para mostrar o formato.
 //
 // As linhas "// >>> sql" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
+```
 
+## O que é um banco de dados relacional
 
-// ### O que é um banco de dados relacional
-
+```sql
 Um banco de dados relacional é organizado em tabelas conectadas entre si por chaves (IDs).
 
 - Tabela: é como uma aba de planilha (ex: tabela "usuario", tabela "sala", tabela "reuniao").
@@ -16,10 +19,11 @@ Um banco de dados relacional é organizado em tabelas conectadas entre si por ch
 
 O SQL (Structured Query Language) é a linguagem que usamos para criar tabelas, inserir, consultar, atualizar e apagar
 registros no PostgreSQL, pelo pgAdmin.
+```
 
+## Passo 1: criar o banco e abrir o editor de comandos
 
-// ### Passo 1: criar o banco e abrir o editor de comandos
-
+```sql
 No pgAdmin:
 1. Clique com o botão direito em Databases > Create > Database, com o nome saep_db.
    (ou, no Query Tool de qualquer banco, rode:   CREATE DATABASE saep_db;)
@@ -27,10 +31,11 @@ No pgAdmin:
 3. Tudo que você digitar dali em diante roda DENTRO do saep_db. Execute com F5 (ou o botão de play).
 
 Se criar as tabelas no banco errado (por exemplo o "postgres"), a API depois não vai encontrá-las.
+```
 
+## Passo 2: tipos de dados mais usados
 
-// ### Passo 2: tipos de dados mais usados
-
+```sql
 - SERIAL: número inteiro sequencial automático (1, 2, 3...). Usado na chave primária (id).
 - VARCHAR(100): texto com limite de caracteres. Ideal para nomes, CPF, senhas e telefones.
 - TEXT: texto longo, sem limite. Ideal para observações e descrições.
@@ -42,10 +47,11 @@ IMPORTANTE (criptografia): quando a senha e o CPF forem criptografados (bcrypt),
 "senha123" e vira um hash de 60 caracteres, algo como $2b$10$Q3x9... Por isso as colunas que vão receber hash
 (cpf e senha de quem tem dado criptografado) devem ser VARCHAR(255). Em VARCHAR(20) o hash não cabe e o banco
 responde "value too long for type character varying(20)".
+```
 
+## Passo 3: regras das colunas (constraints)
 
-// ### Passo 3: regras das colunas (constraints)
-
+```sql
 - PRIMARY KEY: identificador único da linha. Não repete e não pode ser nulo.
 - NOT NULL: a coluna é obrigatória. Se você esquecer de preenchê-la no INSERT, o banco dá erro.
 - UNIQUE: não deixa existir dois registros com o mesmo valor (ex: dois usuários com o mesmo CPF).
@@ -53,10 +59,11 @@ responde "value too long for type character varying(20)".
 - REFERENCES tabela(id): cria a chave estrangeira (FK), ligando este registro ao id de outra tabela.
 - ON DELETE CASCADE: se o registro "pai" for apagado, os "filhos" ligados a ele são apagados juntos.
   Sem isso, apagar um pai que tem filhos dá erro de chave estrangeira.
+```
 
+## Passo 4: modelar antes de criar (quem depende de quem)
 
-// ### Passo 4: modelar antes de criar (quem depende de quem)
-
+```sql
 Pergunta para cada tabela: "ela precisa de outra para existir?"
 
     usuario  ---<  sala        (uma sala pertence a um usuário; um usuário tem várias salas)
@@ -69,10 +76,11 @@ Pergunta para cada tabela: "ela precisa de outra para existir?"
   e por último quem depende dos dois (reuniao). Criar fora de ordem dá erro.
 
 Isto é o que o DER vai mostrar: as tabelas e as setas das chaves estrangeiras.
+```
 
+## Passo 5: criar as tabelas (CREATE TABLE)
 
-// ### Passo 5: criar as tabelas (CREATE TABLE)
-
+```sql
 1. Tabela base: usuario (não depende de nenhuma outra). Quem faz login usa cpf e senha.
 
 // >>> sql
@@ -111,10 +119,11 @@ CREATE TABLE reuniao (
 //   INT         = mesmo tipo do id da outra tabela
 //   NOT NULL    = obrigatório (toda sala TEM que ter um usuário)
 //   REFERENCES usuario(id) = "o valor tem que existir na coluna id da tabela usuario"
+```
 
+## Passo 6: inserir os dados (INSERT) - mínimo 3 registros em TODAS as tabelas
 
-// ### Passo 6: inserir os dados (INSERT) - mínimo 3 registros em TODAS as tabelas
-
+```sql
 É obrigatório ter no mínimo 3 registros em TODAS as tabelas criadas, na mesma ordem em que foram criadas
 (as chaves estrangeiras só podem apontar para registros que já existem).
 
@@ -159,10 +168,11 @@ SELECT 'sala', COUNT(*) FROM sala
 UNION ALL
 SELECT 'reuniao', COUNT(*) FROM reuniao;
 // <<<
+```
 
+## Passo 7: consultar os dados (SELECT)
 
-// ### Passo 7: consultar os dados (SELECT)
-
+```sql
 // >>> sql
 -- Todos os campos de todos os usuários (* = todas as colunas)
 SELECT * FROM usuario;
@@ -180,10 +190,11 @@ SELECT * FROM usuario WHERE cpf = '444.555.666-77';
 SELECT * FROM reuniao ORDER BY data_hora ASC;
 SELECT * FROM reuniao ORDER BY data_hora DESC;
 // <<<
+```
 
+## Passo 8: busca por termo (ILIKE e %)
 
-// ### Passo 8: busca por termo (ILIKE e %)
-
+```sql
 A busca pede um termo digitado pelo usuário e devolve só os registros que combinam.
 
 // >>> sql
@@ -196,12 +207,13 @@ SELECT * FROM sala WHERE nome ILIKE '%lab%' OR bloco ILIKE '%lab%' ORDER BY id;
 
 // - '%ana%' acha "Juliana", "Ana Souza", "Mariana"... (qualquer nome que tenha "ana" dentro).
 // - LIKE comum diferencia maiúscula de minúscula; ILIKE não.
-// - Na API (documentação API.txt, seção Busca por termo) o termo vem da URL e entra no lugar do texto fixo.
+// - Na API (documentação API.md, seção Busca por termo) o termo vem da URL e entra no lugar do texto fixo.
 // - Colunas que guardam HASH (cpf do barbeiro, senha) não servem para busca: o hash não se parece com o texto original.
+```
 
+## Passo 9: juntar tabelas (INNER JOIN)
 
-// ### Passo 9: juntar tabelas (INNER JOIN)
-
+```sql
 A tabela reuniao só guarda números (usuario_id e sala_id). Para mostrar os NOMES, juntamos as tabelas
 usando a chave estrangeira. O INNER JOIN traz só os registros que têm correspondência nas duas tabelas.
 
@@ -249,10 +261,11 @@ WHERE reuniao.usuario_id = 1;
 // - Escreva sempre tabela.coluna (reuniao.id, usuario.nome). Só "id" daria erro: duas tabelas têm a coluna id.
 // - O ORDER BY vem por último, depois dos JOIN.
 // - Esta consulta de 3 tabelas serve para listar os agendamentos de uma tela (ordenada por data).
+```
 
+## Passo 10: alterar dados (UPDATE)
 
-// ### Passo 10: alterar dados (UPDATE)
-
+```sql
 // ATENÇÃO: nunca rode UPDATE sem WHERE. Sem WHERE, TODAS as linhas da tabela são alteradas.
 
 // >>> sql
@@ -264,10 +277,11 @@ UPDATE usuario SET nome = 'Beatriz Lima Souza', senha = 'novasenha123' WHERE id 
 // <<<
 
 // Depois de um UPDATE, rode um SELECT para conferir.
+```
 
+## Passo 11: apagar dados (DELETE) e o efeito do ON DELETE CASCADE
 
-// ### Passo 11: apagar dados (DELETE) e o efeito do ON DELETE CASCADE
-
+```sql
 // ATENÇÃO: nunca rode DELETE sem WHERE. Sem WHERE, TODAS as linhas da tabela são apagadas.
 
 // >>> sql
@@ -281,10 +295,11 @@ DELETE FROM usuario WHERE id = 3;
 //   update or delete on table "usuario" violates foreign key constraint
 // porque o usuário ainda teria salas e reuniões apontando para ele.
 // Isso importa quando uma tela tem o botão excluir e o registro já está ligado a outras tabelas.
+```
 
+## Passo 12: salvando o script saep_db.sql
 
-// ### Passo 12: salvando o script saep_db.sql 
-
+```sql
 O que fica guardado é o ARQUIVO saep_db.sql, não só os comandos que você rodou no pgAdmin.
 1. Escreva os CREATE TABLE e depois os INSERT no arquivo saep_db.sql (da raiz do projeto, no VS Code).
    A ordem do arquivo é a mesma dos passos 5 e 6: todos os CREATE e depois todos os INSERT.
@@ -299,28 +314,31 @@ DROP TABLE IF EXISTS reuniao, sala, usuario;
 // quantas vezes você quiser. Sem ele, rodar duas vezes dá "relation already exists".
 
 Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
+```
 
+## Passo 13: gerando o DER no pgAdmin (der.png)
 
-// ### Passo 13: gerando o DER no pgAdmin (der.png)
-
+```sql
 1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
 2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
 3. O diagrama mostra as tabelas e as setas das chaves estrangeiras. Confira se TODAS as tabelas aparecem
    e se cada seta liga a tabela certa (cliente > barbeiro, agendamento > barbeiro e cliente).
 4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
 5. Renomeie para der.png e coloque na raiz do projeto (pode ser der.png ou der.pdf).
+```
 
+## Conferência final
 
-// ### Conferência final
-
+```sql
 [ ] cada relacionamento tem sua chave estrangeira (REFERENCES) e as tabelas foram criadas na ordem certa
 [ ] TODAS as tabelas têm pelo menos 3 registros, conferido com a consulta de contagem
 [ ] der.png mostra todas as tabelas e as ligações
 [ ] o arquivo saep_db.sql roda inteiro, do zero, sem nenhum erro
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```sql
 - relation "reunioes" does not exist: o nome da tabela no INSERT é diferente do nome do CREATE TABLE
   (plural a mais ou a menos). Copie o nome exatamente como criou.
 - null value in column "senha" violates not-null constraint: faltou a coluna senha na lista do INSERT (ou o valor).
@@ -334,3 +352,4 @@ Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
   Rode o DROP TABLE do passo 12 e depois o script de novo.
 - column "id" is ambiguous: no JOIN, escreva tabela.coluna.
 - As tabelas foram criadas no banco errado: confira no pgAdmin qual banco está selecionado antes de abrir o Query Tool.
+```

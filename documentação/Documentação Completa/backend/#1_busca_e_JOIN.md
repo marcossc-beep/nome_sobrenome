@@ -1,11 +1,14 @@
-// ### Busca por termo, JOIN e ordenação (API)
+# Busca por termo, JOIN e ordenação (API)
+
+```js
 //
-// As rotas abaixo já aparecem com { preHandler: autenticar }, a função definida em #3_criptografia_e_login.txt.
+// As rotas abaixo já aparecem com { preHandler: autenticar }, a função definida em #3_criptografia_e_login.md.
 // Enquanto você não criar a função autenticar, deixe essa parte de fora das rotas.
+```
 
+## Busca por termo
 
-// ### Busca por termo
-
+```js
 A busca tem 3 pedaços que se encaixam:
 1. No SQL: filtrar com ILIKE e % (qualquer texto antes ou depois).
 2. Na API: receber o termo pela URL (?busca=termo) com request.query.
@@ -55,12 +58,13 @@ Authorization: Bearer {{token}}
 GET http://localhost:6767/barbeiros?busca=zzz
 Authorization: Bearer {{token}}
 
-// A tela de busca (formulário, botão buscar e limpar) está na documentação do front-end: ../frontend/#2_crud_barbeiro.txt.
+// A tela de busca (formulário, botão buscar e limpar) está na documentação do front-end: ../frontend/#2_crud_barbeiro.md.
 // encodeURIComponent(busca) protege o termo na URL (espaços e acentos viram códigos seguros).
+```
 
+## JOIN (juntar tabelas)
 
-// ### JOIN (juntar tabelas)
-
+```js
 Por que precisamos: cliente guarda só o barbeiro_id (um número). Para mostrar o NOME do barbeiro
 precisamos juntar as duas tabelas pela chave estrangeira.
 
@@ -85,10 +89,11 @@ servidor.get('/clientes', { preHandler: autenticar }, async (request, reply) => 
 })
 
 // O SQL fica entre crases ( ` ) para poder quebrar em várias linhas.
+```
 
+## JOIN triplo: agendamento + barbeiro + cliente
 
-// ### JOIN triplo: agendamento + barbeiro + cliente
-
+```js
 Exemplo: listar os agendamentos ordenados por dia, trazendo TODOS os dados do barbeiro e do cliente.
 Para isso juntamos as 3 tabelas e ordenamos pela data.
 
@@ -135,13 +140,15 @@ Authorization: Bearer {{token}}
 ### Agendamentos (confira se vêm em ordem de data)
 GET http://localhost:6767/agendamentos
 Authorization: Bearer {{token}}
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - A busca sempre devolve tudo: o ? está faltando na URL ou o nome do parâmetro é diferente (request.query.busca x ?termo=).
 - A busca não acha "ana" digitando "Ana": usou LIKE em vez de ILIKE.
 - "column reference "id" is ambiguous": duas tabelas têm a coluna id. Escreva tabela.coluna (agendamento.id).
 - Nome do cliente e do barbeiro aparecem iguais: faltou o AS (apelido) em um dos dois.
 - "relation agendamento does not exist": o script saep_db.sql não foi rodado no banco certo (saep_db).
 - A lista de agendamentos vem vazia: o INNER JOIN só traz registros que têm barbeiro E cliente válidos.
+```

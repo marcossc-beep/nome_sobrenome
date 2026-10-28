@@ -1,0 +1,13 @@
+{
+    "// Ajustes para a prova: a documentação em .md fica confortável de ler e o REST Client mostra a resposta ao lado": "",
+    "[markdown]": {
+        "editor.wordWrap": "on",
+        "editor.quickSuggestions": {
+            "comments": false,
+            "strings": false,
+            "other": false
+        }
+    },
+    "files.eol": "\n",
+    "rest-client.previewResponseInUntitledDocument": true
+}

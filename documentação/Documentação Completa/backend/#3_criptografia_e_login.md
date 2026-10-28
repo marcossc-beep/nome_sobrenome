@@ -1,18 +1,22 @@
-// ### Criptografia no back-end (bcrypt + JWT) e rota de login
+# Criptografia no back-end (bcrypt + JWT) e rota de login
+
+```js
 //
+```
 
+## O problema
 
-// ### O problema
-
+```js
 Se a senha e o CPF ficam escritos em texto puro no banco, qualquer pessoa que acessar o banco lê tudo.
 A LGPD diz que dados pessoais precisam ficar protegidos.
 Usamos duas ferramentas:
 - bcrypt: transforma a senha e o CPF em um "embaralhado" que não volta mais (hash).
 - JWT: um "crachá" digital que o servidor entrega no login e que tem prazo de validade.
+```
 
+## bcrypt: o que é hash
 
-// ### bcrypt: o que é hash
-
+```js
 - Criptografia comum: vai e volta (criptografa e descriptografa com uma chave).
 - Hash (bcrypt): só vai. Depois que vira hash NÃO existe como voltar ao texto original.
 - Salt: texto aleatório misturado antes do hash. Duas pessoas com a senha "123" ficam com hashes diferentes.
@@ -29,10 +33,11 @@ O bcrypt pega a senha digitada, aplica o mesmo processo e compara com o hash do 
 
 Consequência: o CPF salvo com hash NÃO pode ser mostrado de volta na tela.
 Por isso as listagens de barbeiro não trazem as colunas cpf e senha.
+```
 
+## JWT: o crachá com validade
 
-// ### JWT: o crachá com validade
-
+```js
 Depois do login o servidor devolve um token. Em toda requisição seguinte o front mostra esse token.
 Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
 - dados (payload): o que guardamos dentro, como id e nome. NUNCA a senha.
@@ -40,10 +45,11 @@ Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
 - exp: o horário em que o token vence. É isso que dá expiração à sessão.
 
 Aqui a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
+```
 
+## Imports e configuração do JWT
 
-// ### Imports e configuração do JWT
-
+```js
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
@@ -60,10 +66,11 @@ servidor.register(jwt, {
 // expiresIn: '30m' = o token vale 30 minutos. Depois disso a API responde 401.
 // Para ver a expiração funcionando, troque para '1m', faça login, espere 1 minuto e chame uma rota protegida.
 // O cors é registrado como mostra a documentação do front-end. A conexão com o banco (Pool) é a da Documentação Simplificada.
+```
 
+## A função autenticar (porteiro das rotas)
 
-// ### A função autenticar (porteiro das rotas)
-
+```js
 async function autenticar(request, reply) {
     try {
         await request.jwtVerify()
@@ -81,10 +88,11 @@ async function autenticar(request, reply) {
 //
 // Todas as rotas de barbeiro, cliente e agendamento levam o preHandler. A rota /login NÃO leva.
 // A função autenticar precisa estar escrita ANTES das rotas que a usam.
+```
 
+## Rota POST /login (cpf e senha)
 
-// ### Rota POST /login (cpf e senha)
-
+```js
 // Regras do login:
 // - 400 quando faltar cpf ou senha.
 // - 401 quando o CPF não existir OU a senha estiver errada, com a MESMA mensagem nos dois casos
@@ -125,10 +133,11 @@ servidor.post('/login', async (request, reply) => {
 })
 
 // A resposta leva 3 coisas que o front guarda: token, expira (quando vence) e usuario (com o nome).
+```
 
+## Criptografando o CPF e a senha do barbeiro
 
-// ### Criptografando o CPF e a senha do barbeiro
-
+```js
 // O POST e o PUT usam bcrypt.hash antes de gravar.
 // No PUT, o CPF e a senha só são trocados se vierem preenchidos, porque na tela de edição
 // o usuário não vê o valor antigo (ele está em hash).
@@ -178,11 +187,12 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
     reply.status(200).send({ message: 'Barbeiro Deletado!' })
 })
 
-// A listagem GET /barbeiros (com busca) está em #1_busca_e_JOIN.txt.
+// A listagem GET /barbeiros (com busca) está em #1_busca_e_JOIN.md.
+```
 
+## Os dados que já estão no banco precisam virar hash
 
-// ### Os dados que já estão no banco precisam virar hash
-
+```js
 // O login compara com bcrypt.compare. Se a senha do usuario no banco está em texto puro ("senha123"),
 // o login SEMPRE falha. O jeito mais simples de converter o que já existe é no próprio SQL,
 // com a extensão pgcrypto do Postgres, que gera o mesmo tipo de hash do bcrypt (gen_salt('bf') = bcrypt):
@@ -199,10 +209,11 @@ UPDATE barbeiro SET cpf = crypt(cpf, gen_salt('bf')), senha = crypt(senha, gen_s
 // Outro jeito, sem SQL: gerar um hash no terminal e colar no INSERT:
 //
 //     node -e "import('bcrypt').then(b => b.default.hash('senha123', 10)).then(console.log)"
+```
 
+## Testando no referencias.http
 
-// ### Testando no referencias.http
-
+```http
 @token = COLE_AQUI_O_TOKEN_DA_RESPOSTA_DO_LOGIN
 
 ### Login certo
@@ -246,10 +257,11 @@ Content-Type: application/json
     "cpf": "444.555.666-77",
     "senha": "senha000"
 }
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - "Illegal arguments: string, undefined" no bcrypt.compare: o body veio sem senha, ou a coluna senha
   do usuario está vazia. Confira o JSON do .http e o SELECT no pgAdmin.
 - Login sempre dá 401 mesmo com a senha certa: a senha no banco está em texto puro (rode os UPDATE com crypt acima).
@@ -258,3 +270,4 @@ Content-Type: application/json
 - 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
 - No .http, DELETE e GET não levam Content-Type nem body.
 - O CPF do barbeiro não aparece na listagem: é de propósito, ele está em hash.
+```

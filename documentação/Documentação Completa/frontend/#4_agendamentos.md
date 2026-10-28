@@ -1,25 +1,29 @@
-// ### Tela de Agendamentos: listar ordenado por data e atualizar a data
+# Tela de Agendamentos: listar ordenado por data e atualizar a data
+
+```js
 //
-// Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.txt) e as rotas de agendamento na API.
+// Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.md) e as rotas de agendamento na API.
 // Rotas da API que esta tela usa: GET /agendamentos, POST /agendamentos, PUT /agendamentos/:id,
-// GET /barbeiros e GET /clientes (veja ../backend/#1_busca_e_JOIN.txt e ../backend/#2_cliente_e_agendamento_API.txt).
+// GET /barbeiros e GET /clientes (veja ../backend/#1_busca_e_JOIN.md e ../backend/#2_cliente_e_agendamento_API.md).
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código.
 // As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
+```
 
+## Datas: como o sistema guarda e como o front envia
 
-// ### Datas: como o sistema guarda e como o front envia
-
+```js
 - No banco a coluna é TIMESTAMP (data e hora juntas): 2026-11-18 14:30:00.
 - Front e API trocam datas no formato ISO: 2026-11-18T14:30 (o T separa a data da hora).
 - O campo <input type="datetime-local"> já devolve exatamente esse formato no .value. Não precisa converter.
 - Para MOSTRAR a data em português na tela: new Date(data).toLocaleString('pt-BR', ...)
   (a função formatarData do scripts.js faz isso).
+```
 
+## Passo 1: o esqueleto da tela (FRONT/agendamentos.html)
 
-// ### Passo 1: o esqueleto da tela (FRONT/agendamentos.html)
-
+```js
 Crie o arquivo FRONT/agendamentos.html. O topo, com os links e o botão Sair:
 
 // >>> FRONT/agendamentos.html
@@ -59,10 +63,11 @@ A div onde a lista aparece, o início do script e o fim do arquivo:
 </body>
 </html>
 // <<<
+```
 
+## Passo 2: listar os agendamentos
 
-// ### Passo 2: listar os agendamentos
-
+```js
 Cole DENTRO do <script>, abaixo do protegerPagina():
 
 // >>> FRONT/agendamentos.html
@@ -98,10 +103,11 @@ E a chamada, SEMPRE na última linha do script (acima do </script>):
 //   assim o botão sabe qual campo ler. O botão só funciona depois do passo 3.
 //
 // Teste: recarregue a página. Os agendamentos aparecem do mais antigo para o mais novo.
+```
 
+## Passo 3: atualizar a data
 
-// ### Passo 3: atualizar a data
-
+```js
 Cole ACIMA da linha carregarAgendamentos() do final:
 
 // >>> FRONT/agendamentos.html
@@ -125,10 +131,11 @@ Cole ACIMA da linha carregarAgendamentos() do final:
 // - Depois de atualizar, carregarAgendamentos() busca a lista de novo e ela já aparece na nova ordem.
 //
 // Teste: escolha uma data bem antiga em um agendamento e clique em atualizar data. Ele sobe para o topo da lista.
+```
 
+## Passo 4: criar agendamentos pela tela (para testar)
 
-// ### Passo 4: criar agendamentos pela tela (para testar)
-
+```js
 Os campos e o botão. Cole no HTML ACIMA do comentário "Listagem ordenada por data...":
 
 // >>> FRONT/agendamentos.html
@@ -149,7 +156,7 @@ Os campos e o botão. Cole no HTML ACIMA do comentário "Listagem ordenada por d
 // <<<
 
 No script, cole ACIMA da linha carregarAgendamentos() do final. Os selects funcionam como na tela de clientes
-(#3_cliente_dropdown.txt): a opção mostra o nome e o value é o id.
+(#3_cliente_dropdown.md): a opção mostra o nome e o value é o id.
 
 // >>> FRONT/agendamentos.html
         async function carregarSelects() {
@@ -190,16 +197,18 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
 // <<<
 
 // Teste: crie um agendamento escolhendo data, serviço, barbeiro e cliente. Ele aparece na lista, na posição da data.
+```
 
+## Conferência final
 
-// ### Conferência final
-
+```js
 [ ] a lista mostra os agendamentos em ordem de data, com dados do barbeiro e do cliente
 [ ] escolher uma nova data, clicar em atualizar data e a lista mostra a data nova, e o banco guarda
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - A data aparece "Invalid Date": o campo da API tem outro nome (confira o apelido no SELECT e no Network do F12).
 - A lista não está ordenada: faltou o ORDER BY data_agendamento no GET /agendamentos.
 - A data mudou de horário (algumas horas a mais ou a menos): o JavaScript converteu o fuso. Mande a data como veio do input
@@ -207,3 +216,4 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
 - Atualizou e nada mudou: o botão está lendo o campo errado. Confira se o id do input é data-${ag.id}.
 - "Escolha a nova data!": o campo da linha está vazio, o usuário precisa preencher antes de clicar.
 - "atualizarData is not defined": a função ainda não foi colada (passo 3), ou foi colada fora do <script>.
+```

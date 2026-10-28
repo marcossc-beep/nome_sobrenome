@@ -1,16 +1,19 @@
-// ### Começando o front-end: CORS, fetch, tela de login, sessão e tela principal
+# Começando o front-end: CORS, fetch, tela de login, sessão e tela principal
+
+```js
 //
-// Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#3_criptografia_e_login.txt).
+// Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#3_criptografia_e_login.md).
 // Rotas da API que as telas deste arquivo usam: POST /login.
 // Para treinar só o front-end, a API precisa estar rodando com as rotas citadas em cada arquivo.
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código, nada do que você
 // já fez precisa ser apagado. As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa
 // e termina. Não copie essas linhas, copie só o que está entre elas.
+```
 
+## Passo 1: como o front conversa com a API
 
-// ### Passo 1: como o front conversa com a API
-
+```js
 O front (páginas HTML) roda no navegador. A API (server.js) roda no Node, na porta 6767.
 Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no buscar() da pokedex:
 
@@ -24,10 +27,11 @@ Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no 
 - resposta.ok é true quando o status é 200 a 299. Em 400 e 401 é false.
 - await só funciona dentro de uma função async.
 - GET e DELETE não têm body.
+```
 
+## Passo 2: liberar o CORS na API
 
-// ### Passo 2: liberar o CORS na API
-
+```js
 Como o front e a API são "endereços" diferentes, o navegador bloqueia a conversa por segurança.
 Esse bloqueio se chama CORS. Para liberar, a API diz ao navegador que aceita as chamadas.
 No server.js, logo abaixo do const servidor = Fastify(), registre o cors:
@@ -45,10 +49,11 @@ servidor.register(cors, {
 //
 // Sintoma do CORS faltando: no console do navegador (F12) aparece "blocked by CORS policy"
 // ou "Failed to fetch". Depois de salvar o server.js a API reinicia sozinha (npm start usa --watch).
+```
 
+## Passo 3: abrir o front
 
-// ### Passo 3: abrir o front
-
+```js
 1. Rode a API: npm start (o terminal mostra "API da barbearia rodando em http://localhost:6767").
 2. Abra a pasta FRONT no VS Code, clique com o botão direito no index.html e escolha "Open with Live Server".
    (Dar dois cliques no arquivo também funciona, mas o Live Server recarrega sozinho quando você salva.)
@@ -63,10 +68,11 @@ Páginas do front (pasta FRONT):
     agendamentos.html  tela de agendamentos
     scripts.js         funções usadas por TODAS as páginas (próximo passo)
     styles.css         aparência (não vale ponto, é só para ficar apresentável)
+```
 
+## Passo 4: scripts.js (as funções que todas as páginas usam)
 
-// ### Passo 4: scripts.js (as funções que todas as páginas usam)
-
+```js
 Como vamos ter várias páginas, as funções de sessão ficam num arquivo só e cada página inclui com
 <script src="scripts.js"></script>. Assim você escreve uma vez e usa em todas.
 
@@ -147,10 +153,11 @@ function formatarData(data) {
 //   api()            -> é o fetch que você já conhece, só que já manda o token no header Authorization
 //                       (as rotas protegidas da API exigem) e, se a API responder 401 (token vencido), faz sair()
 //   formatarData()   -> mostra a data em português (usada na tela de agendamentos)
+```
 
+## Passo 5: tela de login (FRONT/index.html)
 
-// ### Passo 5: tela de login (FRONT/index.html)
-
+```js
 Validação em caso de falha no login: fazemos duas.
 - no front: campos vazios;
 - vinda do back: a mensagem da API ("Usuário ou senha inválidos!") aparece na tela.
@@ -232,10 +239,11 @@ Agora a parte que faz funcionar, logo abaixo (fecha o arquivo):
 // - Teste: campos vazios, senha errada (a mensagem da API aparece em vermelho) e senha certa.
 //   No F12 > Application > Local Storage você vê token, expira e usuario guardados.
 // - A principal.html ainda não existe: depois do login certo a página some. Siga para o passo 6.
+```
 
+## Passo 6: tela principal (FRONT/principal.html)
 
-// ### Passo 6: tela principal (FRONT/principal.html)
-
+```js
 O que a tela principal tem:
 - mostrar o nome de quem está logado (vem do localStorage, guardado no login);
 - botão Sair que apaga a sessão;
@@ -294,19 +302,21 @@ E protegerPagina() manda de volta ao login quando a sessão venceu.
 //         <script>protegerPagina()</script>
 //     </body>
 //     </html>
+```
 
+## Passo 7: ver a sessão expirando
 
-// ### Passo 7: ver a sessão expirando
-
+```js
 1. No server.js troque expiresIn: '30m' por '1m'.
 2. Faça login pelo front e entre na principal.
 3. Espere 1 minuto e recarregue a principal.
 4. A tela volta para o login com a mensagem "Sessão expirada...".
 5. Volte para '30m'.
+```
 
+## Passo 8: styles.css (opcional, só aparência)
 
-// ### Passo 8: styles.css (opcional, só aparência)
-
+```js
 Crie o arquivo FRONT/styles.css:
 
 // >>> FRONT/styles.css
@@ -372,20 +382,22 @@ button {
     font-size: 18px;
 }
 // <<<
+```
 
+## Conferência final
 
-// ### Conferência final
-
+```js
 [ ] login com e-mail e senha do banco leva para a principal
 [ ] a sessão tem prazo: depois do tempo, a tela volta ao login
 [ ] campos vazios e senha errada mostram mensagem na tela
 [ ] a principal mostra o nome de quem está logado
 [ ] o botão Sair desloga e volta ao login
 [ ] a principal tem links para Barbeiros, Clientes e Agendamentos
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - A tela de login não faz nada: abra o F12 > Console. Provavelmente tem um erro de JavaScript ou o scripts.js não carregou
   (confira o nome do arquivo no <script src="scripts.js">).
 - "Failed to fetch": a API não está rodando, a porta está errada no scripts.js (const API) ou faltou o CORS.
@@ -394,3 +406,4 @@ button {
 - "Cannot read properties of null (reading 'nome')": pegarUsuario() devolveu null, ou seja, não há usuário salvo.
   Chame protegerPagina() ANTES de usar pegarUsuario().
 - Enter não envia o login: de propósito, o envio é pelo botão entrar (onclick), como na pokedex.
+```

@@ -1,20 +1,24 @@
-// ### API de cliente e de agendamento: cadastrar com chave estrangeira, editar e atualizar a data
+# API de cliente e de agendamento: cadastrar com chave estrangeira, editar e atualizar a data
+
+```js
 //
-// As telas que usam estas rotas estão em ../frontend/#3_cliente_dropdown.txt e ../frontend/#4_agendamentos.txt.
-// As rotas levam { preHandler: autenticar } (função definida em #3_criptografia_e_login.txt).
+// As telas que usam estas rotas estão em ../frontend/#3_cliente_dropdown.md e ../frontend/#4_agendamentos.md.
+// As rotas levam { preHandler: autenticar } (função definida em #3_criptografia_e_login.md).
 // Enquanto você não criar a função autenticar, deixe essa parte de fora.
+```
 
+## Cliente: a ideia
 
-// ### Cliente: a ideia
-
+```js
 Ao cadastrar um novo cliente, ele deve ser associado a um barbeiro.
 No banco isso é a chave estrangeira cliente.barbeiro_id (NOT NULL: todo cliente tem barbeiro).
 O front manda o barbeiro_id no corpo do POST e a API confere se esse barbeiro existe antes de gravar.
 Sem a conferência, um barbeiro_id inexistente estoura erro de chave estrangeira no Postgres e a API responde 500.
+```
 
+## Cliente: POST, PUT e DELETE
 
-// ### Cliente: POST, PUT e DELETE
-
+```js
 servidor.post('/clientes', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
 
@@ -60,7 +64,7 @@ servidor.delete('/clientes/:id', { preHandler: autenticar }, async (request, rep
     reply.status(200).send({ message: 'Cliente Deletado!' })
 })
 
-// A listagem GET /clientes (com JOIN, para trazer o nome do barbeiro) está em #1_busca_e_JOIN.txt.
+// A listagem GET /clientes (com JOIN, para trazer o nome do barbeiro) está em #1_busca_e_JOIN.md.
 
 ### Testes no referencias.http
 
@@ -84,19 +88,21 @@ Content-Type: application/json
     "cpf": "000.000.000-00",
     "barbeiro_id": 999
 }
+```
 
+## Agendamento: como a data é guardada e enviada
 
-// ### Agendamento: como a data é guardada e enviada
-
+```js
 - No banco a coluna é TIMESTAMP (data e hora juntas): 2026-11-18 14:30:00.
 - Front e API trocam datas no formato ISO: 2026-11-18T14:30 (o T separa a data da hora).
 - O Postgres aceita esse formato direto. Não precisa converter.
+```
 
+## Agendamento: POST, PUT (só a data) e DELETE
 
-// ### Agendamento: POST, PUT (só a data) e DELETE
-
+```js
 // O agendamento tem DUAS chaves estrangeiras (barbeiro_id e cliente_id): a API confere as duas antes de gravar.
-// O GET /agendamentos (JOIN triplo e ORDER BY data_hora) está em #1_busca_e_JOIN.txt.
+// O GET /agendamentos (JOIN triplo e ORDER BY data_hora) está em #1_busca_e_JOIN.md.
 
 servidor.post('/agendamentos', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
@@ -166,10 +172,11 @@ Content-Type: application/json
 {
     "data_hora": "2026-11-17T08:30"
 }
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - "Barbeiro informado não existe!" (400): o barbeiro_id enviado não está na tabela barbeiro. Confira com SELECT * FROM barbeiro.
 - "violates foreign key constraint" (500): faltou a conferência antes do INSERT, ou o cliente_id/barbeiro_id não existe.
 - 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
@@ -177,3 +184,4 @@ Content-Type: application/json
 - "Agendamento não existe!" (404): o id que está na URL do PUT não existe.
 - A data mudou de horário (algumas horas a mais ou a menos): o JavaScript converteu o fuso. Envie a data como veio do input
   (2026-11-17T08:30) e deixe o Postgres guardar como TIMESTAMP, sem timezone.
+```

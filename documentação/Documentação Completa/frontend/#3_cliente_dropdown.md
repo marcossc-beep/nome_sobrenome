@@ -1,16 +1,19 @@
-// ### Tela de Clientes: cadastrar um cliente associado a um barbeiro (select com chave estrangeira)
+# Tela de Clientes: cadastrar um cliente associado a um barbeiro (select com chave estrangeira)
+
+```js
 //
-// Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.txt) e as rotas de cliente na API.
+// Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.md) e as rotas de cliente na API.
 // Rotas da API que esta tela usa: GET /barbeiros, GET /clientes e POST /clientes
-// (veja ../backend/#1_busca_e_JOIN.txt e ../backend/#2_cliente_e_agendamento_API.txt).
+// (veja ../backend/#1_busca_e_JOIN.md e ../backend/#2_cliente_e_agendamento_API.md).
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código.
 // As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
+```
 
+## A ideia
 
-// ### A ideia
-
+```js
 Ao cadastrar um novo cliente, ele deve ser associado a um barbeiro.
 No banco isso é a chave estrangeira cliente.barbeiro_id.
 O usuário NÃO deve digitar o número do barbeiro. Ele escolhe o NOME numa lista (<select>)
@@ -20,10 +23,11 @@ e o sistema envia o ID escondido:
 2. Cada barbeiro vira uma <option>: o TEXTO é o nome e o VALUE é o id.
 3. Ao cadastrar, o id escolhido vai no corpo do POST como barbeiro_id.
 4. A API confere se esse barbeiro existe antes de gravar.
+```
 
+## Passo 1: o esqueleto da tela (FRONT/clientes.html)
 
-// ### Passo 1: o esqueleto da tela (FRONT/clientes.html)
-
+```js
 Crie o arquivo FRONT/clientes.html. O topo, com os links e o botão Sair:
 
 // >>> FRONT/clientes.html
@@ -80,10 +84,11 @@ A div da lista, o início do script e o fim do arquivo:
 </body>
 </html>
 // <<<
+```
 
+## Passo 2: preencher o select com os barbeiros do banco
 
-// ### Passo 2: preencher o select com os barbeiros do banco
-
+```js
 Cole DENTRO do <script>, abaixo do protegerPagina():
 
 // >>> FRONT/clientes.html
@@ -102,10 +107,11 @@ Cole DENTRO do <script>, abaixo do protegerPagina():
 // - value="${barbeiro.id}" é o que vai para o banco (a chave estrangeira).
 // - ${barbeiro.nome} é o que o usuário lê.
 // - Esta função precisa ser chamada: veja o passo 4.
+```
 
+## Passo 3: listar os clientes, com o nome do barbeiro
 
-// ### Passo 3: listar os clientes, com o nome do barbeiro
-
+```js
 Cole abaixo da função anterior:
 
 // >>> FRONT/clientes.html
@@ -126,11 +132,12 @@ Cole abaixo da função anterior:
         }
 // <<<
 
-// ${cliente.barbeiro_nome} vem do JOIN do GET /clientes (../backend/#1_busca_e_JOIN.txt).
+// ${cliente.barbeiro_nome} vem do JOIN do GET /clientes (../backend/#1_busca_e_JOIN.md).
+```
 
+## Passo 4: cadastrar o cliente
 
-// ### Passo 4: cadastrar o cliente
-
+```js
 Cole abaixo da função anterior. Se o usuário não escolher o barbeiro, o value do select é vazio
 e bloqueamos o envio com um aviso:
 
@@ -169,18 +176,21 @@ E, por último no script (acima do </script>), chame as duas funções que carre
 // Teste: abra a tela. O select deve ter os barbeiros e a lista deve mostrar os clientes.
 // Tente cadastrar sem escolher o barbeiro (deve avisar) e depois escolhendo um. O novo cliente aparece com o barbeiro.
 // O barbeiro_id chega no back como texto ("1"). Está certo, o Postgres converte sozinho.
+```
 
+## Conferência final
 
-// ### Conferência final
-
+```js
 [ ] cadastrar um cliente escolhendo o barbeiro na lista, e o cliente aparece com o nome do barbeiro
 [ ] sem escolher o barbeiro, o cadastro é bloqueado
+```
 
+## Erros comuns
 
-// ### Erros comuns
-
+```js
 - O select fica só com "selecione...": faltou chamar carregarBarbeiros() no final do script, ou o GET /barbeiros falhou
   (sem token, API parada). Veja o Network no F12.
 - Cadastrou, mas o barbeiro aparece como "undefined": o campo vem do JOIN, confira o apelido barbeiro_nome no GET /clientes.
 - "Barbeiro informado não existe!": o value da option está errado (use barbeiro.id, não o nome).
 - O texto da option aparece cortado ou estranho: a option precisa de abertura e fechamento (<option ...>texto</option>).
+```

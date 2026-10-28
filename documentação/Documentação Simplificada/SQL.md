@@ -1,5 +1,6 @@
-// ### Introdução a Banco de Dados Relacional
+# Introdução a Banco de Dados Relacional
 
+```sql
 Um banco de dados relacional é organizado em tabelas conectadas entre si por chaves (IDs).
 Para entender como as informações ficam guardadas:
 
@@ -8,36 +9,40 @@ Para entender como as informações ficam guardadas:
 - Linhas (Registros/Tuplas): São os dados cadastrados (ex: Linha 1 possui o usuário "Beatriz Lima", cpf "444.555.666-77").
 
 O SQL (Structured Query Language) é a linguagem que usamos para criar as tabelas, inserir, atualizar, consultar e deletar registros no PostgreSQL via PGAdmin.
+```
 
+## Tipos de Dados Mais Utilizados
 
-// ### Tipos de Dados Mais Utilizados
-
+```sql
 - SERIAL: Cria um número inteiro sequencial automático (1, 2, 3...) a cada cadastro. Usado para a Chave Primária (id).
 - VARCHAR(255): Texto com limite fixo de caracteres. Ideal para nomes, CPF, senhas e telefones.
 - INT: Números inteiros sem casas decimais (ex: chaves estrangeiras).
 - TIMESTAMP: Armazena data e hora juntas (ex: 2026-10-15 14:30:00).
 
 OBS: use VARCHAR(255) em cpf e senha. Quando forem criptografados (bcrypt), o valor guardado vira um hash de 60 caracteres e não cabe em VARCHAR(20).
+```
 
+## Regras e Restrições (Constraints)
 
-// ### Regras e Restrições (Constraints)
-
+```sql
 - PRIMARY KEY: Identificador único da linha. Não pode se repetir nem ser nulo.
 - NOT NULL: Torna o preenchimento da coluna obrigatório.
 - UNIQUE: Impede que existam dois registros com o mesmo valor (ex: dois usuários com o mesmo CPF).
 - REFERENCES tabela(id): Cria a Chave Estrangeira (Foreign Key / FK), vinculando o registro atual ao ID de outra tabela.
 - ON DELETE CASCADE: Se o registro pai for deletado, todos os registros filhos ligados a ele serão apagados automaticamente.
+```
 
+## Antes de criar as tabelas: criar o banco
 
-// ### Antes de criar as tabelas: criar o banco
-
+```sql
 No pgAdmin, crie o banco e abra o Query Tool DENTRO dele (botão direito no banco > Query Tool). Todos os comandos abaixo rodam ali.
 
     CREATE DATABASE saep_db;
+```
 
+## Criação de Tabelas (DDL)
 
-// ### Criação de Tabelas (DDL)
-
+```sql
 O script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
 
 -- 1. Tabela Base: USUARIO (Não depende de nenhuma outra tabela)
@@ -70,10 +75,11 @@ CREATE TABLE reuniao (
 
 // Como ler uma chave estrangeira:   usuario_id INT NOT NULL REFERENCES usuario(id)
 //   "a coluna usuario_id é um número obrigatório que precisa existir na coluna id da tabela usuario".
+```
 
+## População Inicial do Banco (exemplo com 3 registros por tabela)
 
-// ### População Inicial do Banco (exemplo com 3 registros por tabela)
-
+```sql
 É obrigatório inserir no mínimo 3 registros em TODAS as tabelas criadas no script `.sql`, respeitando a ordem das chaves estrangeiras.
 - A lista de colunas e os valores precisam estar na mesma ordem e na mesma quantidade.
 - Toda coluna NOT NULL precisa receber valor (o id não, ele é automático).
@@ -105,10 +111,11 @@ INSERT INTO reuniao (data_hora, usuario_id, sala_id) VALUES
 SELECT * FROM usuario;
 SELECT * FROM sala;
 SELECT * FROM reuniao;
+```
 
+## Consultando dados (SELECT)
 
-// ### Consultando dados (SELECT)
-
+```sql
 -- Buscar todos os campos de todos os usuários
 SELECT * FROM usuario;
 
@@ -124,10 +131,11 @@ SELECT * FROM usuario WHERE nome ILIKE '%ana%' ORDER BY id ASC;
 
 -- Ordenar pela data (ASC = mais antiga primeiro)
 SELECT * FROM reuniao ORDER BY data_hora ASC;
+```
 
+## Consultas com Junção de Tabelas (INNER JOIN)
 
-// ### Consultas com Junção de Tabelas (INNER JOIN)
-
+```sql
 O INNER JOIN serve para relacionar e exibir na mesma consulta dados que estão divididos em tabelas diferentes através da Chave Estrangeira.
 
 // 1) JOIN Simples entre 2 Tabelas (Sala + Usuário Responsável):
@@ -156,10 +164,11 @@ ORDER BY reuniao.data_hora ASC;
 
 // OBS: o AS dá um apelido à coluna. Sem ele, usuario.nome e sala.nome viram duas colunas "nome" e se confundem.
 // Escreva sempre tabela.coluna (reuniao.id, usuario.nome), senão o banco reclama de "id ambíguo".
+```
 
+## Alterando e apagando dados (UPDATE e DELETE)
 
-// ### Alterando e apagando dados (UPDATE e DELETE)
-
+```sql
 // 1. UPDATE (Atualizar / Alterar dados)
 // ATENÇÃO: Nunca execute UPDATE sem a cláusula WHERE! Se esquecer o WHERE, alterará a tabela toda.
 
@@ -178,5 +187,4 @@ DELETE FROM usuario WHERE id = 3;
 
 -- OBS: Por causa do ON DELETE CASCADE, a sala e a reunião associadas a este usuario_id serão excluídas automaticamente.
 -- Sem o CASCADE, o banco recusaria o DELETE de um usuário que tem salas e reuniões (erro de chave estrangeira).
-
-
+```
