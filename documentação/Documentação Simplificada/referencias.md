@@ -128,14 +128,14 @@ Authorization: Bearer {{token}}
 
 ## Script completo para copiar e colar no referencias.http
 
-> Jeito mais rápido: abra o arquivo **referencias_completo.http** (nesta mesma pasta), aperte **Ctrl + A** e **Ctrl + C**, e cole no **referencias.http** da raiz do projeto. Depois troque os nomes da barbearia pelos do seu sistema (o começo do arquivo explica o que trocar).
+> Copie todo o bloco abaixo e cole no **referencias.http** da raiz do projeto. Depois troque os nomes da barbearia pelos do seu sistema (o começo do bloco explica o que trocar).
 >
-> O mesmo conteúdo está abaixo, caso prefira copiar daqui.
+> Dica para copiar: passe o mouse sobre o bloco e use o botão de copiar no canto do bloco, se aparecer. Se não aparecer, clique com o botão direito na aba do arquivo, escolha **Reopen Editor With... > Text Editor**, selecione o bloco e copie.
 
 ```http
 ### ==========================================================
 ### referencias.http COMPLETO (exemplo da barbearia)
-### Copie tudo para o referencias.http da raiz do projeto e troque:
+### Cole tudo no referencias.http da raiz do projeto e troque:
 ###   barbeiros -> o nome da sua rota principal (ex.: psicologos)
 ###   clientes  -> a rota da segunda tabela (ex.: pacientes)
 ###   barbeiro_id / cliente_id -> as chaves estrangeiras do seu sistema
