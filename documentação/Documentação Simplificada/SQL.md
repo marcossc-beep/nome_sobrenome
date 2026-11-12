@@ -56,7 +56,7 @@ No pgAdmin, crie o banco e abra o Query Tool DENTRO dele (botão direito no banc
 ```sql
 O script deve seguir a ordem correta de criação (as tabelas base primeiro, e depois as tabelas que possuem Chave Estrangeira).
 
--- 1. Tabela Base: BARBEIRO (Não depende de nenhuma outra tabela). É quem faz login no sistema (cpf e senha).
+-- 1. Tabela Base: BARBEIRO (Não depende de nenhuma outra tabela).
 
 CREATE TABLE barbeiro (
     id SERIAL PRIMARY KEY,
@@ -203,17 +203,18 @@ DELETE FROM barbeiro WHERE id = 3;
 -- Sem o CASCADE, o banco recusaria o DELETE de um barbeiro que tem clientes e agendamentos (erro de chave estrangeira).
 ```
 
-## Criptografando CPF e senha direto no SQL (para o login funcionar)
+## Criptografando CPF e senha direto no SQL (LGPD)
 
 ```sql
--- O login da API compara a senha com bcrypt. Se a senha no banco estiver em texto puro ("senha123"), o login sempre falha.
--- Coloque estas linhas no FIM do saep_db.sql. A extensão pgcrypto gera o mesmo tipo de hash do bcrypt (gen_salt('bf')).
+-- A LGPD pede que dados pessoais fiquem protegidos. Coloque estas linhas no FIM do saep_db.sql:
+-- a extensão pgcrypto transforma o cpf e a senha em um hash (o mesmo tipo do bcrypt, gen_salt('bf')).
+-- O CREATE EXTENSION também libera o crypt() que a API usa no cadastro e na edição (veja o POST e o PUT do API.md).
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 UPDATE barbeiro SET cpf = crypt(cpf, gen_salt('bf')), senha = crypt(senha, gen_salt('bf'));
 
--- Rode UMA vez só (se rodar de novo vira hash do hash e o login deixa de funcionar).
+-- Rode UMA vez só (se rodar de novo vira hash do hash).
 -- Para refazer do zero, apague as tabelas e rode o script inteiro de novo:
 DROP TABLE IF EXISTS agendamento, cliente, barbeiro;
 ```

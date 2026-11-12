@@ -9,27 +9,13 @@ O REST Client é uma extensão do VS Code que permite testar as rotas da API dir
 
 // Regras do arquivo .http:
 // 1. Usamos três hashtags '###' para separar uma requisição da outra.
-// 2. Primeira linha: Método HTTP + URL completa (ex: POST http://localhost:6767/login).
+// 2. Primeira linha: Método HTTP + URL completa (ex: POST http://localhost:6767/barbeiros).
 // 3. Headers: Ficam logo abaixo da URL. Usamos 'Content-Type: application/json' para avisar que o body está em JSON.
 // 4. Linha em branco: É OBRIGATÓRIO dar 1 espaço (linha em branco) entre os Headers e o Body, senão a requisição dá erro.
 // 5. Body (Payload): É o JSON enviado para o servidor nos métodos POST, PUT ou PATCH.
-// 6. Depois que as rotas estiverem protegidas pelo login, toda requisição (menos a do login) leva a linha
-//    Authorization: Bearer {{token}}   (veja o exemplo do token no fim deste arquivo)
 ```
 
 ## Exemplos para o arquivo referencias.http:
-
-### Fazer Login (POST)
-
-```http
-POST http://localhost:6767/login
-Content-Type: application/json
-
-{
-    "cpf": "111.222.333-44",
-    "senha": "senha123"
-}
-```
 
 ### Buscar todos os barbeiros (GET)
 
@@ -105,23 +91,12 @@ Content-Type: application/json
 }
 ```
 
-### Usando o token do login nas rotas protegidas
-
-```http
-@token = COLE_AQUI_O_TOKEN_QUE_VEIO_NA_RESPOSTA_DO_LOGIN
-
-### Listar barbeiros com o token
-GET http://localhost:6767/barbeiros
-Authorization: Bearer {{token}}
-```
-
 ## Status HTTP que usamos
 
 ```text
 // 200  deu certo
 // 201  criado (cadastrar)
 // 400  faltou dado ou dado inválido
-// 401  não autenticado (login errado, token vencido ou faltando)
 // 404  o registro não existe
 // 500  erro no servidor (veja a mensagem no terminal onde roda o npm start)
 ```
@@ -130,52 +105,17 @@ Authorization: Bearer {{token}}
 
 ```http
 @api = http://localhost:6767
-@token = COLE_AQUI_O_TOKEN_QUE_VEIO_NA_RESPOSTA_DO_LOGIN
 
-
-### ---------- LOGIN ----------
-
-### Login certo (esperado: 200 com token, expira e usuario)
-POST {{api}}/login
-Content-Type: application/json
-
-{
-    "cpf": "111.222.333-44",
-    "senha": "senha123"
-}
-
-### Login com senha errada (esperado: 401)
-POST {{api}}/login
-Content-Type: application/json
-
-{
-    "cpf": "111.222.333-44",
-    "senha": "errada"
-}
-
-### Login sem dados (esperado: 400)
-POST {{api}}/login
-Content-Type: application/json
-
-{}
-
-### Rota protegida SEM token (esperado: 401)
-GET {{api}}/barbeiros
-
-
-### ---------- BARBEIROS (quem faz login) ----------
+### ---------- BARBEIROS ----------
 
 ### Listar todos
 GET {{api}}/barbeiros
-Authorization: Bearer {{token}}
 
 ### Buscar por termo
 GET {{api}}/barbeiros?busca=ana
-Authorization: Bearer {{token}}
 
-### Cadastrar (confira no pgAdmin: cpf e senha ficam criptografados)
+### Cadastrar
 POST {{api}}/barbeiros
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -186,7 +126,6 @@ Content-Type: application/json
 
 ### Editar pelo id
 PUT {{api}}/barbeiros/1
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -197,18 +136,14 @@ Content-Type: application/json
 
 ### Excluir pelo id
 DELETE {{api}}/barbeiros/3
-Authorization: Bearer {{token}}
-
 
 ### ---------- CLIENTES (pertencem a um barbeiro) ----------
 
-### Listar com o nome do barbeiro (JOIN)
+### Listar todos
 GET {{api}}/clientes
-Authorization: Bearer {{token}}
 
 ### Cadastrar ligado a um barbeiro
 POST {{api}}/clientes
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -219,7 +154,6 @@ Content-Type: application/json
 
 ### Cadastrar com barbeiro que não existe (esperado: 400)
 POST {{api}}/clientes
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -228,16 +162,13 @@ Content-Type: application/json
     "barbeiro_id": 999
 }
 
-
 ### ---------- AGENDAMENTOS ----------
 
 ### Listar ordenado por data, com os dados do barbeiro e do cliente (JOIN)
 GET {{api}}/agendamentos
-Authorization: Bearer {{token}}
 
 ### Cadastrar
 POST {{api}}/agendamentos
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -248,7 +179,6 @@ Content-Type: application/json
 
 ### Atualizar só a data (depois rode o GET e veja a ordem mudar)
 PUT {{api}}/agendamentos/1
-Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {

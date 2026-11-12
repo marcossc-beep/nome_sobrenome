@@ -10,7 +10,7 @@ Usamos o PG Admin para gerenciar o postgres criando os bancos de dados e as tabe
 ```js
 // No terminal, dentro da pasta do projeto:
 //   npm init -y
-//   npm i fastify @fastify/cors @fastify/jwt bcrypt pg
+//   npm i fastify @fastify/cors pg
 //
 // No package.json, coloque "type": "module" e o script de start:
 //   "type": "module",
@@ -73,7 +73,7 @@ const sql = new Pool({
 
 ```js
 // Toda requisição tem um método então GET, POST, PUT, PATCH ou DELETE.
-// Toda requisição tem um nome de endpoint por exemplo /login.
+// Toda requisição tem um nome de endpoint por exemplo /barbeiros.
 // Quando fazemos requisições alguns métodos podem ter um body também conhecido como payload.
 // As requisições tem um header, normalmente usamos o Content-Type: application/json para enviar json no body.
 // O método post, put e patch podem ter um body.
@@ -161,15 +161,17 @@ servidor.post('/barbeiros', async (request, reply) => {
 
     // insert na tabela através da api de acordo com as informações que vieram do body
 
+    // LGPD: crypt(..., gen_salt('bf')) grava o cpf e a senha criptografados (precisa do pgcrypto, veja o fim do SQL.md)
     const resultado = await sql.query(
-        'INSERT INTO barbeiro (nome, cpf, senha) VALUES ($1, $2, $3)',
+        "INSERT INTO barbeiro (nome, cpf, senha) VALUES ($1, crypt($2, gen_salt('bf')), crypt($3, gen_salt('bf')))",
         [body.nome, body.cpf, body.senha]
     )
 
     reply.status(201).send({ message: "barbeiro cadastrado!" })
 })
 
-// OBS: na versão final o cpf e a senha são gravados criptografados (bcrypt). Veja "Login e criptografia" no fim deste arquivo.
+// Confira no pgAdmin (SELECT * FROM barbeiro): o cpf e a senha do novo barbeiro aparecem como $2a$06$...
+// Repare que a query está entre aspas duplas, porque o 'bf' dentro dela usa aspas simples.
 ```
 
 ## POST que depende de outra tabela (chave estrangeira)
@@ -194,6 +196,26 @@ servidor.post('/clientes', async (request, reply) => {
 
     reply.status(201).send({ message: "Cliente cadastrado!" })
 })
+
+// Cadastrando um agendamento: a mesma ideia, conferindo as duas chaves estrangeiras.
+// A data vai no formato 2026-11-21T15:00 (o mesmo que o input datetime-local do HTML devolve).
+
+servidor.post('/agendamentos', async (request, reply) => {
+    const body = request.body
+
+    const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
+    const cliente = await sql.query('SELECT id FROM cliente WHERE id = $1', [body.cliente_id])
+    if (barbeiro.rows.length === 0 || cliente.rows.length === 0) {
+        return reply.status(400).send({ message: "Barbeiro ou cliente informado não existe!" })
+    }
+
+    await sql.query(
+        'INSERT INTO agendamento (data_hora, barbeiro_id, cliente_id) VALUES ($1, $2, $3)',
+        [body.data_hora, body.barbeiro_id, body.cliente_id]
+    )
+
+    reply.status(201).send({ message: "Agendamento cadastrado!" })
+})
 ```
 
 ## PUT
@@ -207,20 +229,26 @@ servidor.post('/clientes', async (request, reply) => {
 // Os números $1, $2, $3... são só a posição de cada valor no array do segundo parâmetro do sql.query.
 // Não precisam seguir a ordem das colunas. Aqui o id é sempre o $1 (WHERE id = $1) para ficar fácil de lembrar.
 
-servidor.put('/clientes/:id', async (request, reply) => {
+servidor.put('/barbeiros/:id', async (request, reply) => {
     const body = request.body;
     const id = request.params.id;
 
-    const cliente = await sql.query('select * from cliente where id = $1', [id])  
-    if (cliente.rows.length === 0) {
+    const barbeiro = await sql.query('select * from barbeiro where id = $1', [id])
+    if (barbeiro.rows.length === 0) {
         return reply.status(404).send({
-            message: "Cliente não existe!"
+            message: "Barbeiro não existe!"
         })
     }
 
-    await sql.query('UPDATE cliente SET nome = $2, cpf = $3, barbeiro_id = $4 WHERE id = $1', [id, body.nome, body.cpf, body.barbeiro_id])      
-    reply.status(200).send({message: `cliente ${body.nome} alterado!`})          
+    // cpf e senha continuam criptografados na edição (mesmo crypt do cadastro)
+    await sql.query(
+        "UPDATE barbeiro SET nome = $2, cpf = crypt($3, gen_salt('bf')), senha = crypt($4, gen_salt('bf')) WHERE id = $1",
+        [id, body.nome, body.cpf, body.senha]
+    )
+    reply.status(200).send({message: `barbeiro ${body.nome} alterado!`})
 })
+
+// O PUT de cliente é igual, trocando a tabela e as colunas (nome, cpf, barbeiro_id).
 ```
 
 ## PUT que altera só um campo (ex: só a data)
@@ -272,19 +300,6 @@ servidor.delete('/barbeiros/:id', async (request, reply) => {
 servidor.listen({   
     port: 6767
 }).then(() => console.log('API da barbearia rodando em http://localhost:6767'))
-```
-
-## Login e criptografia (resumo)
-
-```js
-// O passo a passo completo está em Documentação Completa/backend/#3_criptografia_e_login.md. O resumo:
-//
-// 1. bcrypt.hash(texto, 10)  -> grava cpf e senha criptografados (POST e PUT de barbeiro).
-// 2. bcrypt.compare(digitado, hash) -> confere a senha no login (true ou false).
-// 3. Como o CPF do barbeiro está criptografado, o login NÃO consegue fazer WHERE cpf = '...'.
-//    Ele lê os barbeiros e compara o CPF digitado com cada hash usando bcrypt.compare.
-// 4. @fastify/jwt -> o login devolve um token com validade (expiresIn: '30m'). As outras rotas
-//    usam { preHandler: autenticar } e respondem 401 quando o token não vem ou já venceu.
 ```
 
 > Os testes de cada rota (REST Client) estão em **referencias.md**.
