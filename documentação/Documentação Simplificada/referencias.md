@@ -126,22 +126,9 @@ Authorization: Bearer {{token}}
 // 500  erro no servidor (veja a mensagem no terminal onde roda o npm start)
 ```
 
-## Script completo para copiar e colar no referencias.http
-
-> Copie todo o bloco abaixo e cole no **referencias.http** da raiz do projeto. Depois troque os nomes da barbearia pelos do seu sistema (o começo do bloco explica o que trocar).
->
-> Dica para copiar: passe o mouse sobre o bloco e use o botão de copiar no canto do bloco, se aparecer. Se não aparecer, clique com o botão direito na aba do arquivo, escolha **Reopen Editor With... > Text Editor**, selecione o bloco e copie.
+## Script completo
 
 ```http
-### ==========================================================
-### referencias.http COMPLETO (exemplo da barbearia)
-### Cole tudo no referencias.http da raiz do projeto e troque:
-###   barbeiros -> o nome da sua rota principal (ex.: psicologos)
-###   clientes  -> a rota da segunda tabela (ex.: pacientes)
-###   barbeiro_id / cliente_id -> as chaves estrangeiras do seu sistema
-### Ordem de uso: 1) rode o login  2) copie o token da resposta para a linha @token  3) teste o resto
-### ==========================================================
-
 @api = http://localhost:6767
 @token = COLE_AQUI_O_TOKEN_QUE_VEIO_NA_RESPOSTA_DO_LOGIN
 
