@@ -1,0 +1,134 @@
+### ==========================================================
+### referencias.http COMPLETO (exemplo da barbearia)
+### Copie tudo para o referencias.http da raiz do projeto e troque:
+###   barbeiros -> o nome da sua rota principal (ex.: psicologos)
+###   clientes  -> a rota da segunda tabela (ex.: pacientes)
+###   barbeiro_id / cliente_id -> as chaves estrangeiras do seu sistema
+### Ordem de uso: 1) rode o login  2) copie o token da resposta para a linha @token  3) teste o resto
+### ==========================================================
+
+@api = http://localhost:6767
+@token = COLE_AQUI_O_TOKEN_QUE_VEIO_NA_RESPOSTA_DO_LOGIN
+
+
+### ---------- LOGIN ----------
+
+### Login certo (esperado: 200 com token, expira e usuario)
+POST {{api}}/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "senha123"
+}
+
+### Login com senha errada (esperado: 401)
+POST {{api}}/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "errada"
+}
+
+### Login sem dados (esperado: 400)
+POST {{api}}/login
+Content-Type: application/json
+
+{}
+
+### Rota protegida SEM token (esperado: 401)
+GET {{api}}/barbeiros
+
+
+### ---------- BARBEIROS (quem faz login) ----------
+
+### Listar todos
+GET {{api}}/barbeiros
+Authorization: Bearer {{token}}
+
+### Buscar por termo
+GET {{api}}/barbeiros?busca=ana
+Authorization: Bearer {{token}}
+
+### Cadastrar (confira no pgAdmin: cpf e senha ficam criptografados)
+POST {{api}}/barbeiros
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Thiago Pente",
+    "cpf": "777.888.999-00",
+    "senha": "senha000"
+}
+
+### Editar pelo id
+PUT {{api}}/barbeiros/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Carlos Silva Souza",
+    "cpf": "111.222.333-44",
+    "senha": "senha123"
+}
+
+### Excluir pelo id
+DELETE {{api}}/barbeiros/3
+Authorization: Bearer {{token}}
+
+
+### ---------- CLIENTES (pertencem a um barbeiro) ----------
+
+### Listar com o nome do barbeiro (JOIN)
+GET {{api}}/clientes
+Authorization: Bearer {{token}}
+
+### Cadastrar ligado a um barbeiro
+POST {{api}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Lucas Ferreira",
+    "cpf": "888.999.000-11",
+    "barbeiro_id": 1
+}
+
+### Cadastrar com barbeiro que não existe (esperado: 400)
+POST {{api}}/clientes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Teste Erro",
+    "cpf": "000.000.000-00",
+    "barbeiro_id": 999
+}
+
+
+### ---------- AGENDAMENTOS ----------
+
+### Listar ordenado por data, com os dados do barbeiro e do cliente (JOIN)
+GET {{api}}/agendamentos
+Authorization: Bearer {{token}}
+
+### Cadastrar
+POST {{api}}/agendamentos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_hora": "2026-11-21T15:00",
+    "barbeiro_id": 1,
+    "cliente_id": 1
+}
+
+### Atualizar só a data (depois rode o GET e veja a ordem mudar)
+PUT {{api}}/agendamentos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "data_hora": "2026-11-17T08:30"
+}
