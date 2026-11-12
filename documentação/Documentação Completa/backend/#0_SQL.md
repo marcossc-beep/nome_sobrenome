@@ -2,7 +2,7 @@
 
 ```sql
 //
-// Os exemplos deste arquivo usam um sistema de usuários, salas e reuniões, só para mostrar o formato.
+// Os exemplos deste arquivo usam o sistema da barbearia: barbeiros, clientes e agendamentos.
 //
 // As linhas "// >>> sql" e "// <<<" só marcam onde o código começa e termina.
 // Não copie essas linhas, copie só o que está entre elas.
@@ -13,9 +13,9 @@
 ```sql
 Um banco de dados relacional é organizado em tabelas conectadas entre si por chaves (IDs).
 
-- Tabela: é como uma aba de planilha (ex: tabela "usuario", tabela "sala", tabela "reuniao").
+- Tabela: é como uma aba de planilha (ex: tabela "barbeiro", tabela "cliente", tabela "agendamento").
 - Coluna (campo): define o tipo de informação guardada (ex: nome, cpf, senha, data_hora).
-- Linha (registro): é um dado cadastrado (ex: a linha 1 da tabela usuario é o usuário "Beatriz Lima").
+- Linha (registro): é um dado cadastrado (ex: a linha 1 da tabela barbeiro é o barbeiro "Carlos Silva").
 
 O SQL (Structured Query Language) é a linguagem que usamos para criar tabelas, inserir, consultar, atualizar e apagar
 registros no PostgreSQL, pelo pgAdmin.
@@ -54,8 +54,8 @@ responde "value too long for type character varying(20)".
 ```sql
 - PRIMARY KEY: identificador único da linha. Não repete e não pode ser nulo.
 - NOT NULL: a coluna é obrigatória. Se você esquecer de preenchê-la no INSERT, o banco dá erro.
-- UNIQUE: não deixa existir dois registros com o mesmo valor (ex: dois usuários com o mesmo CPF).
-  O login por CPF precisa disso: o CPF tem que identificar UMA pessoa só.
+- UNIQUE: não deixa existir dois registros com o mesmo valor. Não usamos no CPF do barbeiro: ele vai ser criptografado
+  com bcrypt, e o mesmo CPF vira um hash diferente a cada vez, então o UNIQUE não teria efeito.
 - REFERENCES tabela(id): cria a chave estrangeira (FK), ligando este registro ao id de outra tabela.
 - ON DELETE CASCADE: se o registro "pai" for apagado, os "filhos" ligados a ele são apagados juntos.
   Sem isso, apagar um pai que tem filhos dá erro de chave estrangeira.
@@ -66,14 +66,14 @@ responde "value too long for type character varying(20)".
 ```sql
 Pergunta para cada tabela: "ela precisa de outra para existir?"
 
-    usuario  ---<  sala        (uma sala pertence a um usuário; um usuário tem várias salas)
-    usuario  ---<  reuniao     (uma reunião tem um usuário organizador)
-    sala     ---<  reuniao     (uma reunião acontece em uma sala)
+    barbeiro  ---<  cliente       (um cliente é atendido por um barbeiro; um barbeiro tem vários clientes)
+    barbeiro  ---<  agendamento   (um agendamento é com um barbeiro)
+    cliente   ---<  agendamento   (um agendamento é de um cliente)
 
-- A tabela que fica do lado "muitos" (sala, reuniao) leva a chave estrangeira (usuario_id, sala_id).
-- A tabela que só tem relacionamento (reuniao liga usuario e sala) leva DUAS chaves estrangeiras.
-- Crie primeiro quem NÃO depende de ninguém (usuario), depois quem depende só dele (sala),
-  e por último quem depende dos dois (reuniao). Criar fora de ordem dá erro.
+- A tabela que fica do lado "muitos" (cliente, agendamento) leva a chave estrangeira (barbeiro_id, cliente_id).
+- A tabela que só tem relacionamento (agendamento liga barbeiro e cliente) leva DUAS chaves estrangeiras.
+- Crie primeiro quem NÃO depende de ninguém (barbeiro), depois quem depende só dele (cliente),
+  e por último quem depende dos dois (agendamento). Criar fora de ordem dá erro.
 
 Isto é o que o DER vai mostrar: as tabelas e as setas das chaves estrangeiras.
 ```
@@ -81,44 +81,44 @@ Isto é o que o DER vai mostrar: as tabelas e as setas das chaves estrangeiras.
 ## Passo 5: criar as tabelas (CREATE TABLE)
 
 ```sql
-1. Tabela base: usuario (não depende de nenhuma outra). Quem faz login usa cpf e senha.
+1. Tabela base: barbeiro (não depende de nenhuma outra). É quem faz login no sistema, com cpf e senha.
 
 // >>> sql
-CREATE TABLE usuario (
+CREATE TABLE barbeiro (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    cpf VARCHAR(255) NOT NULL UNIQUE,
+    cpf VARCHAR(255) NOT NULL,
     senha VARCHAR(255) NOT NULL
 );
 // <<<
 
-2. Tabela secundária: sala (cada sala pertence a um usuário).
+2. Tabela secundária: cliente (cada cliente pertence a um barbeiro).
 
 // >>> sql
-CREATE TABLE sala (
+CREATE TABLE cliente (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    bloco VARCHAR(50) NOT NULL,
-    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE
+    cpf VARCHAR(255) NOT NULL,
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE
 );
 // <<<
 
-3. Tabela de relacionamento: reuniao (vincula usuário e sala em uma data).
+3. Tabela de relacionamento: agendamento (vincula barbeiro e cliente em uma data).
 
 // >>> sql
-CREATE TABLE reuniao (
+CREATE TABLE agendamento (
     id SERIAL PRIMARY KEY,
     data_hora TIMESTAMP NOT NULL,
-    usuario_id INT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
-    sala_id INT NOT NULL REFERENCES sala(id) ON DELETE CASCADE
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE,
+    cliente_id INT NOT NULL REFERENCES cliente(id) ON DELETE CASCADE
 );
 // <<<
 
-// Como ler uma chave estrangeira:   usuario_id INT NOT NULL REFERENCES usuario(id)
-//   usuario_id  = nome da coluna nesta tabela
+// Como ler uma chave estrangeira:   barbeiro_id INT NOT NULL REFERENCES barbeiro(id)
+//   barbeiro_id = nome da coluna nesta tabela
 //   INT         = mesmo tipo do id da outra tabela
-//   NOT NULL    = obrigatório (toda sala TEM que ter um usuário)
-//   REFERENCES usuario(id) = "o valor tem que existir na coluna id da tabela usuario"
+//   NOT NULL    = obrigatório (todo cliente TEM que ter um barbeiro)
+//   REFERENCES barbeiro(id) = "o valor tem que existir na coluna id da tabela barbeiro"
 ```
 
 ## Passo 6: inserir os dados (INSERT) - mínimo 3 registros em TODAS as tabelas
@@ -130,43 +130,43 @@ CREATE TABLE reuniao (
 Regras do INSERT:
 - A lista de colunas entre parênteses e os valores têm que estar na MESMA ordem e na MESMA quantidade.
 - Toda coluna NOT NULL (sem valor padrão) precisa estar na lista. O id (SERIAL) não precisa.
-- O nome da tabela é o mesmo do CREATE TABLE: se você criou "reuniao", é INSERT INTO reuniao (e não "reunioes").
+- O nome da tabela é o mesmo do CREATE TABLE: se você criou "agendamento", é INSERT INTO agendamento (e não "agendamentos").
 - Texto e data vão entre aspas simples.
 
 // >>> sql
-INSERT INTO usuario (nome, cpf, senha) VALUES
-('Beatriz Lima', '444.555.666-77', 'senha123'),
-('Rafael Costa', '555.666.777-88', 'senha456'),
-('Juliana Alves', '666.777.888-99', 'senha789');
+INSERT INTO barbeiro (nome, cpf, senha) VALUES
+('Carlos Silva', '111.222.333-44', 'senha123'),
+('Ana Souza', '222.333.444-55', 'senha456'),
+('Marcos Oliveira', '333.444.555-66', 'senha789');
 // <<<
 
-Os ids foram gerados sozinhos: Beatriz = 1, Rafael = 2, Juliana = 3. As próximas tabelas apontam para esses números.
+Os ids foram gerados sozinhos: Carlos = 1, Ana = 2, Marcos = 3. As próximas tabelas apontam para esses números.
 
 // >>> sql
-INSERT INTO sala (nome, bloco, usuario_id) VALUES
-('Auditório Principal', 'Bloco A', 1),
-('Laboratório de Inovação', 'Bloco B', 2),
-('Sala de Reuniões 01', 'Bloco C', 3);
+INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES
+('Pedro Santos', '444.555.666-77', 3),
+('Juliana Costa', '555.666.777-88', 2),
+('Rafael Lima', '666.777.888-99', 1);
 // <<<
 
 // >>> sql
-INSERT INTO reuniao (data_hora, usuario_id, sala_id) VALUES
-('2026-12-10 14:00:00', 1, 1),
-('2026-12-08 09:30:00', 2, 2),
-('2026-12-09 16:00:00', 3, 3);
+INSERT INTO agendamento (data_hora, barbeiro_id, cliente_id) VALUES
+('2026-11-20 14:00:00', 1, 1),
+('2026-11-18 10:30:00', 2, 2),
+('2026-11-19 16:00:00', 3, 3);
 // <<<
 
 // Dica: use datas DIFERENTES e fora de ordem. Assim, quando você ordenar por data, dá para ver a ordenação funcionando.
-// Dica: o usuario_id e o sala_id precisam existir (1, 2 ou 3 neste exemplo). Um 9 daria erro de chave estrangeira.
+// Dica: o barbeiro_id e o cliente_id precisam existir (1, 2 ou 3 neste exemplo). Um 9 daria erro de chave estrangeira.
 
 Conferindo se ficou 3 em cada tabela. Esta consulta mostra a contagem das três de uma vez:
 
 // >>> sql
-SELECT 'usuario' AS tabela, COUNT(*) AS registros FROM usuario
+SELECT 'barbeiro' AS tabela, COUNT(*) AS registros FROM barbeiro
 UNION ALL
-SELECT 'sala', COUNT(*) FROM sala
+SELECT 'cliente', COUNT(*) FROM cliente
 UNION ALL
-SELECT 'reuniao', COUNT(*) FROM reuniao;
+SELECT 'agendamento', COUNT(*) FROM agendamento;
 // <<<
 ```
 
@@ -174,21 +174,21 @@ SELECT 'reuniao', COUNT(*) FROM reuniao;
 
 ```sql
 // >>> sql
--- Todos os campos de todos os usuários (* = todas as colunas)
-SELECT * FROM usuario;
+-- Todos os campos de todos os barbeiros (* = todas as colunas)
+SELECT * FROM barbeiro;
 
 -- Só algumas colunas
-SELECT nome, cpf FROM usuario;
+SELECT id, nome FROM barbeiro;
 
 -- Filtrando por id
-SELECT * FROM usuario WHERE id = 1;
+SELECT * FROM barbeiro WHERE id = 1;
 
--- Filtrando por CPF (é assim que o login encontra a pessoa)
-SELECT * FROM usuario WHERE cpf = '444.555.666-77';
+-- Filtrando por CPF (funciona com o CPF do cliente, que fica em texto; o do barbeiro vai estar criptografado)
+SELECT * FROM cliente WHERE cpf = '444.555.666-77';
 
 -- Ordenando: ASC = do menor para o maior, DESC = do maior para o menor
-SELECT * FROM reuniao ORDER BY data_hora ASC;
-SELECT * FROM reuniao ORDER BY data_hora DESC;
+SELECT * FROM agendamento ORDER BY data_hora ASC;
+SELECT * FROM agendamento ORDER BY data_hora DESC;
 // <<<
 ```
 
@@ -199,10 +199,10 @@ A busca pede um termo digitado pelo usuário e devolve só os registros que comb
 
 // >>> sql
 -- ILIKE ignora maiúsculas e minúsculas. O % vale por "qualquer texto antes ou depois".
-SELECT * FROM usuario WHERE nome ILIKE '%ana%';
+SELECT id, nome FROM barbeiro WHERE nome ILIKE '%ana%';
 
 -- Buscando o termo em mais de uma coluna com OR
-SELECT * FROM sala WHERE nome ILIKE '%lab%' OR bloco ILIKE '%lab%' ORDER BY id;
+SELECT * FROM cliente WHERE nome ILIKE '%ra%' OR cpf ILIKE '%444%' ORDER BY id;
 // <<<
 
 // - '%ana%' acha "Juliana", "Ana Souza", "Mariana"... (qualquer nome que tenha "ana" dentro).
@@ -214,51 +214,51 @@ SELECT * FROM sala WHERE nome ILIKE '%lab%' OR bloco ILIKE '%lab%' ORDER BY id;
 ## Passo 9: juntar tabelas (INNER JOIN)
 
 ```sql
-A tabela reuniao só guarda números (usuario_id e sala_id). Para mostrar os NOMES, juntamos as tabelas
+A tabela agendamento só guarda números (barbeiro_id e cliente_id). Para mostrar os NOMES, juntamos as tabelas
 usando a chave estrangeira. O INNER JOIN traz só os registros que têm correspondência nas duas tabelas.
 
 Receita:   FROM tabela_com_FK   INNER JOIN tabela_pai ON tabela_com_FK.coluna_fk = tabela_pai.id
 
-1) JOIN simples entre 2 tabelas (sala + usuário responsável):
+1) JOIN simples entre 2 tabelas (cliente + barbeiro responsável):
 
 // >>> sql
 SELECT
-    sala.id AS id_sala,
-    sala.nome AS nome_sala,
-    sala.bloco,
-    usuario.nome AS responsavel_sala
-FROM sala
-INNER JOIN usuario ON sala.usuario_id = usuario.id;
+    cliente.id AS id_cliente,
+    cliente.nome AS nome_cliente,
+    cliente.cpf AS cpf_cliente,
+    barbeiro.nome AS barbeiro_responsavel
+FROM cliente
+INNER JOIN barbeiro ON cliente.barbeiro_id = barbeiro.id;
 // <<<
 
-2) JOIN triplo entre 3 tabelas, ordenado por data (reunião + organizador + sala):
+2) JOIN triplo entre 3 tabelas, ordenado por data (agendamento + barbeiro + cliente):
 
 // >>> sql
 SELECT
-    reuniao.id AS id_reuniao,
-    reuniao.data_hora,
-    usuario.nome AS organizador,
-    usuario.cpf AS cpf_organizador,
-    sala.nome AS sala_reservada,
-    sala.bloco
-FROM reuniao
-INNER JOIN usuario ON reuniao.usuario_id = usuario.id
-INNER JOIN sala ON reuniao.sala_id = sala.id
-ORDER BY reuniao.data_hora ASC;
+    agendamento.id AS id_agendamento,
+    agendamento.data_hora,
+    barbeiro.nome AS barbeiro_nome,
+    cliente.nome AS cliente_nome,
+    cliente.cpf AS cliente_cpf
+FROM agendamento
+INNER JOIN barbeiro ON agendamento.barbeiro_id = barbeiro.id
+INNER JOIN cliente ON agendamento.cliente_id = cliente.id
+ORDER BY agendamento.data_hora ASC;
 // <<<
 
-3) JOIN com filtro (só as reuniões de um usuário):
+3) JOIN com filtro (só os agendamentos de um barbeiro):
 
 // >>> sql
-SELECT reuniao.id, reuniao.data_hora, sala.nome AS sala
-FROM reuniao
-INNER JOIN sala ON reuniao.sala_id = sala.id
-WHERE reuniao.usuario_id = 1;
+SELECT agendamento.id, agendamento.data_hora, cliente.nome AS cliente
+FROM agendamento
+INNER JOIN cliente ON agendamento.cliente_id = cliente.id
+WHERE agendamento.barbeiro_id = 1;
 // <<<
 
 // Pontos para entender:
-// - AS dá um apelido à coluna. Sem ele, usuario.nome e sala.nome viram duas colunas chamadas "nome" e se confundem.
-// - Escreva sempre tabela.coluna (reuniao.id, usuario.nome). Só "id" daria erro: duas tabelas têm a coluna id.
+// - AS dá um apelido à coluna. Sem ele, barbeiro.nome e cliente.nome viram duas colunas chamadas "nome" e se confundem.
+// - Escreva sempre tabela.coluna (agendamento.id, barbeiro.nome). Só "id" daria erro: duas tabelas têm a coluna id.
+// - O cpf mostrado é o do CLIENTE. O cpf do barbeiro fica criptografado e não aparece nas listagens.
 // - O ORDER BY vem por último, depois dos JOIN.
 // - Esta consulta de 3 tabelas serve para listar os agendamentos de uma tela (ordenada por data).
 ```
@@ -269,11 +269,11 @@ WHERE reuniao.usuario_id = 1;
 // ATENÇÃO: nunca rode UPDATE sem WHERE. Sem WHERE, TODAS as linhas da tabela são alteradas.
 
 // >>> sql
--- Mudando só a data de uma reunião (parecido com "atualizar a data do agendamento")
-UPDATE reuniao SET data_hora = '2026-12-20 09:00:00' WHERE id = 1;
+-- Mudando só a data de um agendamento (é o "atualizar a data do agendamento" da tela)
+UPDATE agendamento SET data_hora = '2026-11-25 09:00:00' WHERE id = 1;
 
 -- Mudando mais de uma coluna de uma vez
-UPDATE usuario SET nome = 'Beatriz Lima Souza', senha = 'novasenha123' WHERE id = 1;
+UPDATE cliente SET nome = 'Pedro Santos Lima', barbeiro_id = 2 WHERE id = 1;
 // <<<
 
 // Depois de um UPDATE, rode um SELECT para conferir.
@@ -285,15 +285,16 @@ UPDATE usuario SET nome = 'Beatriz Lima Souza', senha = 'novasenha123' WHERE id 
 // ATENÇÃO: nunca rode DELETE sem WHERE. Sem WHERE, TODAS as linhas da tabela são apagadas.
 
 // >>> sql
-DELETE FROM usuario WHERE id = 3;
+DELETE FROM barbeiro WHERE id = 3;
 // <<<
 
-// Por causa do ON DELETE CASCADE, a sala e a reunião ligadas ao usuário 3 também foram apagadas.
-// Confira com a mesma consulta de contagem do passo 6: usuario e sala ficam com 2 e reuniao com 2.
+// Por causa do ON DELETE CASCADE, o cliente e o agendamento ligados ao barbeiro 3 também foram apagados
+// (o cliente Pedro Santos era do barbeiro 3, e o agendamento 3 era com esse barbeiro).
+// Confira com a mesma consulta de contagem do passo 6.
 //
 // Sem o ON DELETE CASCADE o resultado seria um erro:
-//   update or delete on table "usuario" violates foreign key constraint
-// porque o usuário ainda teria salas e reuniões apontando para ele.
+//   update or delete on table "barbeiro" violates foreign key constraint
+// porque o barbeiro ainda teria clientes e agendamentos apontando para ele.
 // Isso importa quando uma tela tem o botão excluir e o registro já está ligado a outras tabelas.
 ```
 
@@ -307,7 +308,7 @@ O que fica guardado é o ARQUIVO saep_db.sql, não só os comandos que você rod
 3. Teste o script do zero: apague as tabelas e rode de novo. Todas no mesmo DROP, o Postgres apaga na ordem certa:
 
 // >>> sql
-DROP TABLE IF EXISTS reuniao, sala, usuario;
+DROP TABLE IF EXISTS agendamento, cliente, barbeiro;
 // <<<
 
 // (use os nomes das SUAS tabelas). Dica: coloque esse DROP no começo do saep_db.sql, assim o script pode ser rodado
@@ -339,16 +340,16 @@ Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
 ## Erros comuns
 
 ```sql
-- relation "reunioes" does not exist: o nome da tabela no INSERT é diferente do nome do CREATE TABLE
+- relation "agendamentos" does not exist: o nome da tabela no INSERT é diferente do nome do CREATE TABLE
   (plural a mais ou a menos). Copie o nome exatamente como criou.
 - null value in column "senha" violates not-null constraint: faltou a coluna senha na lista do INSERT (ou o valor).
   Toda coluna NOT NULL precisa receber um valor.
-- insert or update on table "sala" violates foreign key constraint: o usuario_id (ou sala_id) apontado não existe.
-  Confira os ids com SELECT * FROM usuario.
+- insert or update on table "cliente" violates foreign key constraint: o barbeiro_id (ou cliente_id) apontado não existe.
+  Confira os ids com SELECT * FROM barbeiro.
 - Os INSERT de uma tabela falham em cascata: se barbeiro não foi populado, cliente e agendamento também falham,
   pois dependem dele. Corrija o primeiro erro e rode de novo do zero.
 - value too long for type character varying(20): a coluna é pequena demais para o hash. Use VARCHAR(255).
-- relation "usuario" already exists / duplicate key value violates unique constraint: o script foi rodado duas vezes.
+- relation "barbeiro" already exists / duplicate key value violates unique constraint: o script foi rodado duas vezes.
   Rode o DROP TABLE do passo 12 e depois o script de novo.
 - column "id" is ambiguous: no JOIN, escreva tabela.coluna.
 - As tabelas foram criadas no banco errado: confira no pgAdmin qual banco está selecionado antes de abrir o Query Tool.

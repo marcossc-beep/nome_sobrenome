@@ -1,5 +1,10 @@
 {
-    "// Ajustes para a prova: a documentação em .md fica confortável de ler e o REST Client mostra a resposta ao lado": "",
+    "// Ajustes para a prova: a documentação em .md abre já no modo de leitura (visualização) e o REST Client mostra a resposta ao lado": "",
+    "workbench.editorAssociations": {
+        "*.md": "vscode.markdown.preview.editor"
+    },
+    "markdown.preview.breaks": true,
+    "markdown.preview.fontSize": 15,
     "[markdown]": {
         "editor.wordWrap": "on",
         "editor.quickSuggestions": {

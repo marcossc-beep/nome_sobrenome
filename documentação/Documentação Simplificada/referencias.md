@@ -13,28 +13,11 @@ O REST Client é uma extensão do VS Code que permite testar as rotas da API dir
 // 3. Headers: Ficam logo abaixo da URL. Usamos 'Content-Type: application/json' para avisar que o body está em JSON.
 // 4. Linha em branco: É OBRIGATÓRIO dar 1 espaço (linha em branco) entre os Headers e o Body, senão a requisição dá erro.
 // 5. Body (Payload): É o JSON enviado para o servidor nos métodos POST, PUT ou PATCH.
+// 6. Depois que as rotas estiverem protegidas pelo login, toda requisição (menos a do login) leva a linha
+//    Authorization: Bearer {{token}}   (veja o exemplo do token no fim deste arquivo)
 ```
 
 ## Exemplos para o arquivo referencias.http:
-
-### Buscar todos os usuários (GET)
-
-```http
-GET http://localhost:6767/usuarios
-```
-
-### Cadastrar um usuário (POST)
-
-```http
-POST http://localhost:6767/usuarios
-Content-Type: application/json
-
-{
-    "nome": "Carlos Dias",
-    "cpf": "777.888.999-00",
-    "senha": "senha000"
-}
-```
 
 ### Fazer Login (POST)
 
@@ -43,64 +26,93 @@ POST http://localhost:6767/login
 Content-Type: application/json
 
 {
-    "cpf": "444.555.666-77",
+    "cpf": "111.222.333-44",
     "senha": "senha123"
 }
 ```
 
-### Atualizar um usuário por ID (PUT)
+### Buscar todos os barbeiros (GET)
 
 ```http
-PUT http://localhost:6767/usuarios/1
+GET http://localhost:6767/barbeiros
+```
+
+### Buscar barbeiros por termo (GET com ?busca=)
+
+```http
+GET http://localhost:6767/barbeiros?busca=ana
+```
+
+### Cadastrar um barbeiro (POST)
+
+```http
+POST http://localhost:6767/barbeiros
 Content-Type: application/json
 
 {
-    "nome": "Beatriz Lima Souza",
-    "cpf": "444.555.666-77",
+    "nome": "Thiago Pente",
+    "cpf": "777.888.999-00",
+    "senha": "senha000"
+}
+```
+
+### Atualizar um barbeiro por ID (PUT)
+
+```http
+PUT http://localhost:6767/barbeiros/1
+Content-Type: application/json
+
+{
+    "nome": "Carlos Silva Souza",
+    "cpf": "111.222.333-44",
     "senha": "senha123"
 }
 ```
 
-### Deletar um usuário por ID (DELETE)
+### Deletar um barbeiro por ID (DELETE)
 
 ```http
-DELETE http://localhost:6767/usuarios/1
+DELETE http://localhost:6767/barbeiros/1
 ```
 
-### Buscar usuários por termo (GET com ?busca=)
+### Cadastrar um cliente ligado a um barbeiro (POST com chave estrangeira)
 
 ```http
-GET http://localhost:6767/usuarios?busca=ana
-```
-
-### Listar as reuniões com JOIN, ordenadas por data (GET)
-
-```http
-GET http://localhost:6767/reunioes
-```
-
-### Cadastrar uma sala ligada a um usuário (POST com chave estrangeira)
-
-```http
-POST http://localhost:6767/salas
+POST http://localhost:6767/clientes
 Content-Type: application/json
 
 {
-    "nome": "Sala 04",
-    "bloco": "Bloco A",
-    "usuario_id": 1
+    "nome": "Lucas Ferreira",
+    "cpf": "888.999.000-11",
+    "barbeiro_id": 1
 }
 ```
 
-### Atualizar só a data de uma reunião (PUT)
+### Listar os agendamentos com JOIN, ordenados por data (GET)
 
 ```http
-PUT http://localhost:6767/reunioes/1
+GET http://localhost:6767/agendamentos
+```
+
+### Atualizar só a data de um agendamento (PUT)
+
+```http
+PUT http://localhost:6767/agendamentos/1
 Content-Type: application/json
 
 {
-    "data_hora": "2026-12-20T09:00"
+    "data_hora": "2026-11-25T09:00"
 }
+```
+
+### Usando o token do login nas rotas protegidas
+
+```http
+@token = COLE_AQUI_O_TOKEN_QUE_VEIO_NA_RESPOSTA_DO_LOGIN
+
+### Listar barbeiros com o token
+GET http://localhost:6767/barbeiros
+Authorization: Bearer {{token}}
 ```
 
 ## Status HTTP que usamos
@@ -109,7 +121,7 @@ Content-Type: application/json
 // 200  deu certo
 // 201  criado (cadastrar)
 // 400  faltou dado ou dado inválido
-// 401  não autenticado (login errado, token vencido)
+// 401  não autenticado (login errado, token vencido ou faltando)
 // 404  o registro não existe
 // 500  erro no servidor (veja a mensagem no terminal onde roda o npm start)
 ```

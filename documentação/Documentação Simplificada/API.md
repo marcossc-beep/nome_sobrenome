@@ -5,6 +5,20 @@ API serve para conectar no banco, o que usamos em aula foi a biblioteca do PG pa
 Usamos o PG Admin para gerenciar o postgres criando os bancos de dados e as tabelas no banco.
 ```
 
+## Criando o projeto (uma vez só)
+
+```js
+// No terminal, dentro da pasta do projeto:
+//   npm init -y
+//   npm i fastify @fastify/cors @fastify/jwt bcrypt pg
+//
+// No package.json, coloque "type": "module" e o script de start:
+//   "type": "module",
+//   "scripts": { "start": "node --watch server.js" }
+//
+// Para rodar a API:  npm start
+```
+
 ## utilização do fastify para gerenciar o servidor e a comunicação com o http.
 
 ```js
@@ -12,7 +26,12 @@ Usamos o PG Admin para gerenciar o postgres criando os bancos de dados e as tabe
 // O fastify é como a loja onde encontramos os meios para criar a casa sem precisar criar esses meios a cada projeto.
 
 import Fastify from 'fastify'
+import cors from '@fastify/cors'
+
 const servidor = Fastify();
+
+// O cors libera o front-end (index.html aberto no navegador) a chamar a API.
+servidor.register(cors, { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] })
 ```
 
 ## Como conectar a API no banco de dados:
@@ -33,19 +52,19 @@ const sql = new Pool({
 
 // exemplo:
 
-// await sql.query('DELETE FROM usuario where id = $1', [id]) 
+// await sql.query('DELETE FROM barbeiro where id = $1', [id]) 
 
 // $1 é o valor da variável id que está no array de dependencias.
 
 // OUTRO EXEMPLO:
 
-// await sql.query('INSERT INTO usuario (nome, cpf, senha) VALUES ($1, $2, $3)', [body.nome, body.cpf, body.senha])  
+// await sql.query('INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES ($1, $2, $3)', [body.nome, body.cpf, body.barbeiro_id])  
 
 // podem ter outros elementos no array de dependencias 
 
 // $1 vai receber o valor de body.nome,
 // $2 vai receber o valor de body.cpf,
-// $3 vai receber o valor de body.senha
+// $3 vai receber o valor de body.barbeiro_id
 
 // isso é necessário para evitar SQL injection
 ```
@@ -67,16 +86,16 @@ const sql = new Pool({
 
 // reply é usado para enviar uma resposta personalizada
 
-// onde está '/usuarios' é o nome do endpoint precisa estar igual na documentação
-// por exemplo GET http://localhost:6767/usuarios 
-servidor.get('/usuarios', async (request, reply) => {
+// onde está '/clientes' é o nome do endpoint precisa estar igual na documentação
+// por exemplo GET http://localhost:6767/clientes 
+servidor.get('/clientes', async (request, reply) => {
 
-    // usuario é o nome da tabela nesse exemplo
-    const usuarios = await sql.query('select * from usuario')
+    // cliente é o nome da tabela nesse exemplo
+    const clientes = await sql.query('select * from cliente')
     
-    // usuarios é uma variável criada que recebe tudo que veio da tabela usuario
-    // usuarios.rows é para retornar somente as linhas da tabela
-    reply.send(usuarios.rows)
+    // clientes é uma variável criada que recebe tudo que veio da tabela cliente
+    // clientes.rows é para retornar somente as linhas da tabela
+    reply.send(clientes.rows)
 })
 ```
 
@@ -84,26 +103,25 @@ servidor.get('/usuarios', async (request, reply) => {
 
 ```js
 // Tudo que vem depois do ? na URL chega em request.query:
-// GET http://localhost:6767/usuarios?busca=ana  ->  request.query.busca === 'ana'
+// GET http://localhost:6767/barbeiros?busca=ana  ->  request.query.busca === 'ana'
 // Se não vier nada, request.query.busca é undefined e a rota lista todos.
 
-// Use este GET no lugar do GET simples de cima (duas rotas iguais dão erro no Fastify).
 // O SQL com ILIKE está no SQL.md: ele ignora maiúsculas/minúsculas e o % vale por "qualquer texto antes ou depois".
-// Repare que a senha não é pedida no SELECT: não devolvemos o que não precisa aparecer.
+// Repare que o cpf e a senha não são pedidos no SELECT: estão criptografados e não devem sair da API.
 
-servidor.get('/usuarios', async (request, reply) => {
+servidor.get('/barbeiros', async (request, reply) => {
     const busca = request.query.busca
 
     if (busca) {
-        const usuarios = await sql.query(
-            'SELECT id, nome, cpf FROM usuario WHERE nome ILIKE $1 ORDER BY id',
+        const barbeiros = await sql.query(
+            'SELECT id, nome FROM barbeiro WHERE nome ILIKE $1 ORDER BY id',
             [`%${busca}%`]
         )
-        return reply.send(usuarios.rows)
+        return reply.send(barbeiros.rows)
     }
 
-    const usuarios = await sql.query('SELECT id, nome, cpf FROM usuario ORDER BY id')
-    reply.send(usuarios.rows)
+    const barbeiros = await sql.query('SELECT id, nome FROM barbeiro ORDER BY id')
+    reply.send(barbeiros.rows)
 })
 ```
 
@@ -112,22 +130,22 @@ servidor.get('/usuarios', async (request, reply) => {
 ```js
 // O SQL do JOIN está no SQL.md. Na API é só colocar o mesmo SQL dentro do sql.query.
 // Entre crases ( ` ) o SQL pode ficar em várias linhas. Use AS para dar apelido às colunas
-// e ORDER BY para ordenar (aqui, pela data da reunião).
+// e ORDER BY para ordenar (aqui, pela data do agendamento).
 
-servidor.get('/reunioes', async (request, reply) => {
-    const reunioes = await sql.query(`
+servidor.get('/agendamentos', async (request, reply) => {
+    const agendamentos = await sql.query(`
         SELECT
-            reuniao.id,
-            reuniao.data_hora,
-            usuario.nome AS organizador,
-            sala.nome AS sala_reservada,
-            sala.bloco
-        FROM reuniao
-        INNER JOIN usuario ON reuniao.usuario_id = usuario.id
-        INNER JOIN sala ON reuniao.sala_id = sala.id
-        ORDER BY reuniao.data_hora ASC
+            agendamento.id,
+            agendamento.data_hora,
+            barbeiro.nome AS barbeiro_nome,
+            cliente.nome AS cliente_nome,
+            cliente.cpf AS cliente_cpf
+        FROM agendamento
+        INNER JOIN barbeiro ON agendamento.barbeiro_id = barbeiro.id
+        INNER JOIN cliente ON agendamento.cliente_id = cliente.id
+        ORDER BY agendamento.data_hora ASC
     `)
-    reply.send(reunioes.rows)
+    reply.send(agendamentos.rows)
 })
 ```
 
@@ -136,43 +154,45 @@ servidor.get('/reunioes', async (request, reply) => {
 ```js
 // request é onde ficam as informações que vieram na requisição como o body
 
-// Cadastrando usuarrios
-servidor.post('/usuarios', async (request, reply) => {
+// Cadastrando barbeiros
+servidor.post('/barbeiros', async (request, reply) => {
     // pegando as informações que vieram do body da requisição
     const body = request.body
 
     // insert na tabela através da api de acordo com as informações que vieram do body
 
     const resultado = await sql.query(
-        'INSERT INTO usuario (nome, cpf, senha) VALUES ($1, $2, $3)',
+        'INSERT INTO barbeiro (nome, cpf, senha) VALUES ($1, $2, $3)',
         [body.nome, body.cpf, body.senha]
     )
 
-    reply.status(201).send({ message: "usuario cadastrado!" })
+    reply.status(201).send({ message: "barbeiro cadastrado!" })
 })
+
+// OBS: na versão final o cpf e a senha são gravados criptografados (bcrypt). Veja "Login e criptografia" no fim deste arquivo.
 ```
 
 ## POST que depende de outra tabela (chave estrangeira)
 
 ```js
-// A sala pertence a um usuário (sala.usuario_id). Antes de gravar, conferimos se o usuário existe.
+// O cliente pertence a um barbeiro (cliente.barbeiro_id). Antes de gravar, conferimos se o barbeiro existe.
 // Sem essa conferência, um id que não existe faz o Postgres dar erro e a API responde 500.
-// A reunião tem duas chaves estrangeiras (usuario_id e sala_id): é a mesma ideia, conferindo as duas.
+// O agendamento tem duas chaves estrangeiras (barbeiro_id e cliente_id): é a mesma ideia, conferindo as duas.
 
-servidor.post('/salas', async (request, reply) => {
+servidor.post('/clientes', async (request, reply) => {
     const body = request.body
 
-    const usuario = await sql.query('SELECT id FROM usuario WHERE id = $1', [body.usuario_id])
-    if (usuario.rows.length === 0) {
-        return reply.status(400).send({ message: "Usuário informado não existe!" })
+    const barbeiro = await sql.query('SELECT id FROM barbeiro WHERE id = $1', [body.barbeiro_id])
+    if (barbeiro.rows.length === 0) {
+        return reply.status(400).send({ message: "Barbeiro informado não existe!" })
     }
 
     await sql.query(
-        'INSERT INTO sala (nome, bloco, usuario_id) VALUES ($1, $2, $3)',
-        [body.nome, body.bloco, body.usuario_id]
+        'INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES ($1, $2, $3)',
+        [body.nome, body.cpf, body.barbeiro_id]
     )
 
-    reply.status(201).send({ message: "Sala cadastrada!" })
+    reply.status(201).send({ message: "Cliente cadastrado!" })
 })
 ```
 
@@ -187,19 +207,19 @@ servidor.post('/salas', async (request, reply) => {
 // Os números $1, $2, $3... são só a posição de cada valor no array do segundo parâmetro do sql.query.
 // Não precisam seguir a ordem das colunas. Aqui o id é sempre o $1 (WHERE id = $1) para ficar fácil de lembrar.
 
-servidor.put('/usuarios/:id', async (request, reply) => {
+servidor.put('/clientes/:id', async (request, reply) => {
     const body = request.body;
     const id = request.params.id;
 
-    const usuario = await sql.query('select * from usuario where id = $1', [id])  
-    if (usuario.rows.length === 0) {
-        return reply.status(400).send({
-            message: "Usuário não existe!"
+    const cliente = await sql.query('select * from cliente where id = $1', [id])  
+    if (cliente.rows.length === 0) {
+        return reply.status(404).send({
+            message: "Cliente não existe!"
         })
     }
 
-    const resultado = await sql.query('UPDATE usuario SET nome = $2, cpf = $3, senha = $4 WHERE id = $1', [id, body.nome, body.cpf, body.senha])      
-    reply.status(201).send({message: `usuario ${body.nome} alterado!`})          
+    await sql.query('UPDATE cliente SET nome = $2, cpf = $3, barbeiro_id = $4 WHERE id = $1', [id, body.nome, body.cpf, body.barbeiro_id])      
+    reply.status(200).send({message: `cliente ${body.nome} alterado!`})          
 })
 ```
 
@@ -208,22 +228,22 @@ servidor.put('/usuarios/:id', async (request, reply) => {
 ```js
 // resultado.rowCount diz quantas linhas o UPDATE alterou. Se foi zero, o id não existe (404).
 // Sempre use WHERE no UPDATE. Sem o WHERE, todas as linhas da tabela mudam.
-// A data vai no formato 2026-12-20T09:00 (o mesmo que o input datetime-local do HTML devolve).
+// A data vai no formato 2026-11-25T09:00 (o mesmo que o input datetime-local do HTML devolve).
 
-servidor.put('/reunioes/:id', async (request, reply) => {
+servidor.put('/agendamentos/:id', async (request, reply) => {
     const body = request.body
     const id = request.params.id
 
     const resultado = await sql.query(
-        'UPDATE reuniao SET data_hora = $2 WHERE id = $1',
+        'UPDATE agendamento SET data_hora = $2 WHERE id = $1',
         [id, body.data_hora]
     )
 
     if (resultado.rowCount === 0) {
-        return reply.status(404).send({ message: "Reunião não existe!" })
+        return reply.status(404).send({ message: "Agendamento não existe!" })
     }
 
-    reply.status(200).send({ message: "Data da reunião atualizada!" })
+    reply.status(200).send({ message: "Data do agendamento atualizada!" })
 })
 ```
 
@@ -233,12 +253,14 @@ servidor.put('/reunioes/:id', async (request, reply) => {
 // é necessário enviar para o servidor o id de qual registro será deletado.
 // normalmente enviamos o id na propria url da requisição por isso :id
 
-servidor.delete('/usuarios/:id', async (request, reply) => {
+servidor.delete('/barbeiros/:id', async (request, reply) => {
     const id = request.params.id
-    const resultado = await sql.query('DELETE FROM usuario where id = $1', [id]) 
+    const resultado = await sql.query('DELETE FROM barbeiro where id = $1', [id]) 
     console.log(resultado);    
-    reply.status(200).send({message:'Usuário Deletado!'})
+    reply.status(200).send({message:'Barbeiro Deletado!'})
 })
+
+// Por causa do ON DELETE CASCADE, os clientes e agendamentos desse barbeiro também são apagados.
 ```
 
 ## Listen
@@ -249,7 +271,20 @@ servidor.delete('/usuarios/:id', async (request, reply) => {
 
 servidor.listen({   
     port: 6767
-})
+}).then(() => console.log('API da barbearia rodando em http://localhost:6767'))
+```
+
+## Login e criptografia (resumo)
+
+```js
+// O passo a passo completo está em Documentação Completa/backend/#3_criptografia_e_login.md. O resumo:
+//
+// 1. bcrypt.hash(texto, 10)  -> grava cpf e senha criptografados (POST e PUT de barbeiro).
+// 2. bcrypt.compare(digitado, hash) -> confere a senha no login (true ou false).
+// 3. Como o CPF do barbeiro está criptografado, o login NÃO consegue fazer WHERE cpf = '...'.
+//    Ele lê os barbeiros e compara o CPF digitado com cada hash usando bcrypt.compare.
+// 4. @fastify/jwt -> o login devolve um token com validade (expiresIn: '30m'). As outras rotas
+//    usam { preHandler: autenticar } e respondem 401 quando o token não vem ou já venceu.
 ```
 
 > Os testes de cada rota (REST Client) estão em **referencias.md**.

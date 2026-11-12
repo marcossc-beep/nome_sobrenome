@@ -29,7 +29,7 @@ Como fica salvo no banco (60 caracteres, por isso as colunas cpf e senha são VA
 Se o hash não volta, como o login confere a senha?
 O bcrypt pega a senha digitada, aplica o mesmo processo e compara com o hash do banco:
 
-    const senhaValida = await bcrypt.compare(body.senha, usuario.senha)   // true ou false
+    const senhaValida = await bcrypt.compare(body.senha, barbeiro.senha)   // true ou false
 
 Consequência: o CPF salvo com hash NÃO pode ser mostrado de volta na tela.
 Por isso as listagens de barbeiro não trazem as colunas cpf e senha.
@@ -93,11 +93,16 @@ async function autenticar(request, reply) {
 ## Rota POST /login (cpf e senha)
 
 ```js
+// Quem faz login é o BARBEIRO (cpf e senha da tabela barbeiro).
 // Regras do login:
 // - 400 quando faltar cpf ou senha.
 // - 401 quando o CPF não existir OU a senha estiver errada, com a MESMA mensagem nos dois casos
 //   (assim ninguém descobre quais CPFs existem no sistema).
-// - Se estiver certo: gerar o token e devolver também o nome do usuário.
+// - Se estiver certo: gerar o token e devolver também o nome do barbeiro.
+//
+// ATENÇÃO: o CPF do barbeiro está criptografado. O bcrypt gera um hash diferente a cada vez,
+// então NÃO dá para fazer WHERE cpf = '111.222.333-44'. O login lê os barbeiros e compara o CPF digitado
+// com o hash de cada um usando bcrypt.compare, até achar o barbeiro certo.
 
 servidor.post('/login', async (request, reply) => {
     const body = request.body
@@ -106,20 +111,29 @@ servidor.post('/login', async (request, reply) => {
         return reply.status(400).send({ message: 'CPF e senha são obrigatórios!' })
     }
 
-    const resultado = await sql.query('SELECT * FROM usuario WHERE cpf = $1', [body.cpf])
+    const resultado = await sql.query('SELECT * FROM barbeiro')
 
-    if (resultado.rows.length === 0) {
+    // procura o barbeiro cujo CPF criptografado bate com o CPF digitado
+    let barbeiro = null
+    for (const item of resultado.rows) {
+        const cpfConfere = await bcrypt.compare(body.cpf, item.cpf)
+        if (cpfConfere) {
+            barbeiro = item
+            break
+        }
+    }
+
+    if (!barbeiro) {
         return reply.status(401).send({ message: 'Usuário ou senha inválidos!' })
     }
 
-    const usuario = resultado.rows[0]
-    const senhaValida = await bcrypt.compare(body.senha, usuario.senha)
+    const senhaValida = await bcrypt.compare(body.senha, barbeiro.senha)
 
     if (!senhaValida) {
         return reply.status(401).send({ message: 'Usuário ou senha inválidos!' })
     }
 
-    const token = servidor.jwt.sign({ id: usuario.id, nome: usuario.nome })
+    const token = servidor.jwt.sign({ id: barbeiro.id, nome: barbeiro.nome })
 
     // exp vem em segundos dentro do token, o front usa em milissegundos
     const expira = servidor.jwt.decode(token).exp * 1000
@@ -128,11 +142,12 @@ servidor.post('/login', async (request, reply) => {
         message: 'Login realizado com sucesso!',
         token: token,
         expira: expira,
-        usuario: { id: usuario.id, nome: usuario.nome }
+        usuario: { id: barbeiro.id, nome: barbeiro.nome }
     })
 })
 
-// A resposta leva 3 coisas que o front guarda: token, expira (quando vence) e usuario (com o nome).
+// A resposta leva 3 coisas que o front guarda: token, expira (quando vence) e usuario (o barbeiro logado, com o nome).
+// O nome "usuario" na resposta é só o nome da chave: quem está logado é o barbeiro.
 ```
 
 ## Criptografando o CPF e a senha do barbeiro
@@ -193,18 +208,17 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
 ## Os dados que já estão no banco precisam virar hash
 
 ```js
-// O login compara com bcrypt.compare. Se a senha do usuario no banco está em texto puro ("senha123"),
+// O login compara com bcrypt.compare. Se o CPF e a senha do barbeiro no banco estão em texto puro ("senha123"),
 // o login SEMPRE falha. O jeito mais simples de converter o que já existe é no próprio SQL,
 // com a extensão pgcrypto do Postgres, que gera o mesmo tipo de hash do bcrypt (gen_salt('bf') = bcrypt):
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-UPDATE usuario SET senha = crypt(senha, gen_salt('bf'));
 UPDATE barbeiro SET cpf = crypt(cpf, gen_salt('bf')), senha = crypt(senha, gen_salt('bf'));
 
 // Rode isso UMA vez só, senão faz hash do hash e o login deixa de funcionar.
 // Coloque essas linhas no FIM do saep_db.sql: assim o script, rodado do zero, já deixa o banco pronto para o login.
-// (O CPF do usuario fica em texto puro, porque é com ele que o login procura a pessoa.)
+// Depois disso, entre com o CPF e a senha que estavam no INSERT (ex.: 111.222.333-44 e senha123).
 //
 // Outro jeito, sem SQL: gerar um hash no terminal e colar no INSERT:
 //
@@ -262,9 +276,10 @@ Content-Type: application/json
 ## Erros comuns
 
 ```js
-- "Illegal arguments: string, undefined" no bcrypt.compare: o body veio sem senha, ou a coluna senha
-  do usuario está vazia. Confira o JSON do .http e o SELECT no pgAdmin.
-- Login sempre dá 401 mesmo com a senha certa: a senha no banco está em texto puro (rode os UPDATE com crypt acima).
+- "Illegal arguments: string, undefined" no bcrypt.compare: o body veio sem cpf ou sem senha, ou a coluna
+  do barbeiro está vazia. Confira o JSON do .http e o SELECT no pgAdmin.
+- Login sempre dá 401 mesmo com a senha certa: o CPF ou a senha do barbeiro no banco estão em texto puro
+  (rode o UPDATE com crypt acima). O CPF do login tem que ser digitado igual ao do INSERT (com pontos e traço).
 - Login deixou de funcionar depois de rodar os UPDATE duas vezes: a senha virou hash de hash. Rode o saep_db.sql do zero.
 - "autenticar is not defined": a função autenticar precisa estar escrita ANTES das rotas que a usam.
 - 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
