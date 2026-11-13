@@ -3,27 +3,13 @@
 A API recebe as requisições HTTP do front (ou do REST Client), executa o SQL no PostgreSQL e devolve a resposta em JSON.
 Todo o código fica no `server.js`, na raiz do projeto. Porta da API: `6767`.
 
+Execução: `npm start` no terminal do VS Code (reinicia a API sempre que o `server.js` é salvo).
+
 | Biblioteca | Função |
 |---|---|
 | `fastify` | servidor HTTP e rotas |
 | `@fastify/cors` | libera o front (navegador) a chamar a API |
 | `pg` | conexão com o PostgreSQL |
-
-## Projeto
-
-```bash
-npm init -y
-npm i fastify @fastify/cors pg
-```
-
-`package.json`:
-
-```json
-"type": "module",
-"scripts": { "start": "node --watch server.js" }
-```
-
-Execução: `npm start` (o `--watch` reinicia a API quando o `server.js` é salvo).
 
 ## Servidor, CORS e conexão
 

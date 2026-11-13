@@ -10,19 +10,11 @@
 //     Method 'GET' already declared for route '/barbeiros'
 ```
 
-## Passo 1: o projeto
+## Rodando a API
 
 ```js
-// No terminal, dentro da pasta do projeto:
-//     npm init -y
-//     npm i fastify @fastify/cors @fastify/jwt bcrypt pg
-//
-// No package.json:
-//     "type": "module",
-//     "scripts": { "start": "node --watch server.js" }
-//
-// Para rodar a API:  npm start   (o --watch reinicia a API sozinho quando você salva o server.js)
-// (Neste repositório o package.json já está pronto: basta npm install e depois npm start.)
+// No terminal do VS Code, na pasta do projeto:  npm start
+// A API reinicia sozinha sempre que você salva o server.js.
 ```
 
 ## O problema que a criptografia resolve
@@ -69,7 +61,7 @@ Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
 Aqui a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
 ```
 
-## Passo 2: imports, cors, JWT e conexão com o banco
+## Passo 1: imports, cors, JWT e conexão com o banco
 
 ```js
 import Fastify from 'fastify'
@@ -104,7 +96,7 @@ const sql = new Pool({
 // sql.query('SQL com $1, $2...', [valor1, valor2]) roda o SQL no banco. Os $ evitam SQL injection.
 ```
 
-## Passo 3: a função autenticar (porteiro das rotas)
+## Passo 2: a função autenticar (porteiro das rotas)
 
 ```js
 async function autenticar(request, reply) {
@@ -126,7 +118,7 @@ async function autenticar(request, reply) {
 // A função autenticar precisa estar escrita ANTES das rotas que a usam.
 ```
 
-## Passo 4: rota POST /login (cpf e senha)
+## Passo 3: rota POST /login (cpf e senha)
 
 ```js
 // Quem faz login é o BARBEIRO (cpf e senha da tabela barbeiro).
@@ -186,7 +178,7 @@ servidor.post('/login', async (request, reply) => {
 // O nome "usuario" na resposta é só o nome da chave: quem está logado é o barbeiro.
 ```
 
-## Passo 5: cadastrar, editar e excluir barbeiro (com bcrypt)
+## Passo 4: cadastrar, editar e excluir barbeiro (com bcrypt)
 
 ```js
 // O POST e o PUT usam bcrypt.hash antes de gravar.
@@ -240,7 +232,7 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
 })
 ```
 
-## Passo 6: listen (última coisa do server.js)
+## Passo 5: listen (última coisa do server.js)
 
 ```js
 // Fica SEMPRE no final do server.js. As rotas dos próximos arquivos entram ACIMA dele.

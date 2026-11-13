@@ -14,10 +14,9 @@ git clone https://github.com/marcossc-beep/nome_sobrenome
 
 2. Aceite as extensões recomendadas que o VS Code oferecer (REST Client, Markdown All in One, Markdown PDF e Live Server).
 3. Os arquivos `.md` da documentação já abrem no modo de leitura. Para editar um deles, clique com o botão direito na aba e escolha **Reopen Editor With... > Text Editor**.
-4. Instale as dependências e rode a API:
+4. As dependências já estão na pasta `node_modules`. Para rodar a API:
 
 ```bash
-npm install
 npm start
 ```
 

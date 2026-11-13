@@ -34,7 +34,7 @@ Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no 
 ```js
 Como o front e a API são "endereços" diferentes, o navegador bloqueia a conversa por segurança.
 Esse bloqueio se chama CORS. Para liberar, a API diz ao navegador que aceita as chamadas.
-O cors já foi registrado no server.js (passo 2 do ../backend/#1_servidor_login_e_criptografia.md), assim:
+O cors já foi registrado no server.js (passo 1 do ../backend/#1_servidor_login_e_criptografia.md), assim:
 
     servidor.register(cors, {
         origin: '*',
