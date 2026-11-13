@@ -37,7 +37,7 @@ Se criar as tabelas no banco errado (por exemplo o "postgres"), a API depois nã
 
 ```sql
 - SERIAL: número inteiro sequencial automático (1, 2, 3...). Usado na chave primária (id).
-- VARCHAR(100): texto com limite de caracteres. Ideal para nomes, CPF, senhas e telefones.
+- VARCHAR(255): texto com limite de caracteres. Ideal para nomes, CPF e senhas.
 - TEXT: texto longo, sem limite. Ideal para observações e descrições.
 - INT: número inteiro. Toda chave estrangeira é INT.
 - TIMESTAMP: data e hora juntas (ex: 2026-11-18 14:30:00).

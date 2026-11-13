@@ -71,10 +71,8 @@ Abaixo, o título e os campos do formulário (um input para cada coluna que o us
 
     <div id="formulario">
         <input type="text" placeholder="nome" id="nome">
-        <input type="text" placeholder="e-mail" id="email">
         <input type="text" placeholder="cpf" id="cpf">
         <input type="password" placeholder="senha" id="senha">
-        <input type="text" placeholder="telefone" id="telefone">
     </div>
 // <<<
 
@@ -124,9 +122,7 @@ Escreva a função carregar() DENTRO do <script>, abaixo do let barbeiros = []:
             barbeiros.forEach((barbeiro) => {
                 lista.innerHTML += `
                 <div class="item">
-                    <b>${barbeiro.nome}</b> <br>
-                    e-mail: ${barbeiro.email} <br>
-                    telefone: ${barbeiro.telefone || ''} <br>
+                    <b>${barbeiro.nome}</b> (código ${barbeiro.id}) <br>
                     <button onclick="editar(${barbeiro.id})">editar</button>
                     <button onclick="excluir(${barbeiro.id})">excluir</button>
                 </div>`
@@ -143,7 +139,6 @@ E a chamada, que fica SEMPRE na última linha do script (acima do </script>):
 // Como funciona:
 // - api('/barbeiros') chama GET /barbeiros mandando o token e devolve o array de barbeiros.
 // - lista.innerHTML = '' limpa a lista antes. O forEach monta um bloco (div class="item") para cada barbeiro.
-// - ${barbeiro.telefone || ''} evita aparecer "null" na tela quando o telefone está vazio.
 // - Não mostramos cpf nem senha: a API nem devolve (estão em hash).
 // - O parâmetro busca é do passo 5. Sem ele (vazio), o caminho é só '/barbeiros' e lista todos.
 // - Os botões editar e excluir já aparecem, mas ainda não funcionam: as funções existem só nos passos 4 e 6.
@@ -168,10 +163,8 @@ A primeira só limpa os campos depois de cadastrar (querySelectorAll pega todos 
         async function cadastrar() {
             const barbeiro = {
                 nome: document.getElementById('nome').value,
-                email: document.getElementById('email').value,
                 cpf: document.getElementById('cpf').value,
-                senha: document.getElementById('senha').value,
-                telefone: document.getElementById('telefone').value
+                senha: document.getElementById('senha').value
             }
 
             const dados = await api('/barbeiros', 'POST', barbeiro)
@@ -226,7 +219,7 @@ No HTML, cole ACIMA da linha <div id="lista"></div>:
 // >>> FRONT/barbeiros.html
     <br><br>
 
-    <input type="text" placeholder="buscar por nome ou e-mail" id="termo">
+    <input type="text" placeholder="buscar por nome" id="termo">
     <button onclick="buscar()">buscar</button>
     <button onclick="limparBusca()">limpar busca</button>
 // <<<
@@ -248,7 +241,7 @@ No script, cole ACIMA da linha carregar() do final:
 // - encodeURIComponent protege o termo na URL (espaços e acentos viram códigos seguros).
 // - limparBusca() esvazia o campo e chama carregar() sem termo: lista tudo de novo.
 //
-// Teste: digite "raf" e clique em buscar; só o Rafael deve aparecer. Clique em limpar busca.
+// Teste: digite "ana" e clique em buscar; só a Ana Souza deve aparecer. Clique em limpar busca.
 ```
 
 ## Passo 6: editar (U)
@@ -284,8 +277,6 @@ No script, cole ACIMA da linha carregar() do final:
 
             document.getElementById('id').value = barbeiro.id
             document.getElementById('nome').value = barbeiro.nome
-            document.getElementById('email').value = barbeiro.email
-            document.getElementById('telefone').value = barbeiro.telefone || ''
             // cpf e senha estão em hash: só preenche se quiser trocar
             document.getElementById('cpf').value = ''
             document.getElementById('senha').value = ''
@@ -301,10 +292,8 @@ No script, cole ACIMA da linha carregar() do final:
             const id = document.getElementById('id').value
             const barbeiro = {
                 nome: document.getElementById('nome').value,
-                email: document.getElementById('email').value,
                 cpf: document.getElementById('cpf').value,
-                senha: document.getElementById('senha').value,
-                telefone: document.getElementById('telefone').value
+                senha: document.getElementById('senha').value
             }
 
             const dados = await api(`/barbeiros/${id}`, 'PUT', barbeiro)

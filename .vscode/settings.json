@@ -1,7 +1,8 @@
 {
-    "// Ajustes para a prova: a documentação em .md abre já no modo de leitura (visualização) e o REST Client mostra a resposta ao lado": "",
+    "// Ajustes para a prova: a documentação em .md abre já no modo de leitura (visualização), o documentacao.md abre para editar e vira PDF pelo Markdown PDF": "",
     "workbench.editorAssociations": {
-        "*.md": "vscode.markdown.preview.editor"
+        "**/documentação/**/*.md": "vscode.markdown.preview.editor",
+        "**/README.md": "vscode.markdown.preview.editor"
     },
     "markdown.preview.breaks": true,
     "markdown.preview.fontSize": 15,
@@ -14,5 +15,9 @@
         }
     },
     "files.eol": "\n",
-    "rest-client.previewResponseInUntitledDocument": true
+    "rest-client.previewResponseInUntitledDocument": true,
+    "markdown-pdf.executablePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "markdown-pdf.type": ["pdf"],
+    "markdown-pdf.displayHeaderFooter": false,
+    "markdown-pdf.convertOnSave": false
 }

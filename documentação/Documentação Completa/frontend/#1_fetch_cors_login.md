@@ -19,7 +19,7 @@ Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no 
 
     const resposta = await fetch('http://localhost:6767/login', {
         method: 'POST',                                   // GET, POST, PUT ou DELETE
-        body: JSON.stringify({ email, senha }),           // o que vai para a API
+        body: JSON.stringify({ cpf, senha }),             // o que vai para a API
         headers: { 'Content-Type': 'application/json' }   // avisa que o corpo é JSON
     })
     const dados = await resposta.json()                   // lê a resposta da API
@@ -158,6 +158,7 @@ function formatarData(data) {
 ## Passo 5: tela de login (FRONT/index.html)
 
 ```js
+Quem faz login é o barbeiro, com o CPF e a senha (digite o CPF igual ao do INSERT, com pontos e traço).
 Validação em caso de falha no login: fazemos duas.
 - no front: campos vazios;
 - vinda do back: a mensagem da API ("Usuário ou senha inválidos!") aparece na tela.
@@ -176,7 +177,7 @@ Primeiro a parte visual. Salve e veja no navegador (os botões ainda não fazem 
 <body>
     <h1>Barbearia - Login</h1>
 
-    <input type="email" placeholder="e-mail" id="email">
+    <input type="text" placeholder="cpf" id="cpf">
     <input type="password" placeholder="senha" id="senha">
 
     <button onclick="entrar()">entrar</button>
@@ -196,19 +197,19 @@ Agora a parte que faz funcionar, logo abaixo (fecha o arquivo):
         }
 
         async function entrar() {
-            const email = document.getElementById('email').value
+            const cpf = document.getElementById('cpf').value
             const senha = document.getElementById('senha').value
             const mensagem = document.getElementById('mensagem')
 
             // Validação no front: campos vazios
-            if (!email || !senha) {
-                mensagem.textContent = 'Preencha e-mail e senha!'
+            if (!cpf || !senha) {
+                mensagem.textContent = 'Preencha CPF e senha!'
                 return
             }
 
             const resposta = await fetch(`${API}/login`, {
                 method: 'POST',
-                body: JSON.stringify({ email, senha }),
+                body: JSON.stringify({ cpf, senha }),
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -387,7 +388,7 @@ button {
 ## Conferência final
 
 ```js
-[ ] login com e-mail e senha do banco leva para a principal
+[ ] login com o CPF e a senha de um barbeiro do banco leva para a principal
 [ ] a sessão tem prazo: depois do tempo, a tela volta ao login
 [ ] campos vazios e senha errada mostram mensagem na tela
 [ ] a principal mostra o nome de quem está logado

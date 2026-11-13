@@ -1,6 +1,8 @@
 {
     "recommendations": [
         "humao.rest-client",
-        "yzhang.markdown-all-in-one"
+        "yzhang.markdown-all-in-one",
+        "yzane.markdown-pdf",
+        "ritwickdey.liveserver"
     ]
 }

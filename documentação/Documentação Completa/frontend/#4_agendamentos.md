@@ -79,9 +79,9 @@ Cole DENTRO do <script>, abaixo do protegerPagina():
             agendamentos.forEach((ag) => {
                 lista.innerHTML += `
                 <div class="item">
-                    <b>${formatarData(ag.data_agendamento)}</b> - ${ag.servico} <br>
-                    barbeiro: ${ag.barbeiro_nome} - ${ag.barbeiro_email} - ${ag.barbeiro_telefone || ''} <br>
-                    cliente: ${ag.cliente_nome} - ${ag.cliente_telefone || ''} - estilo: ${ag.cliente_estilo_corte || ''} <br>
+                    <b>${formatarData(ag.data_hora)}</b> <br>
+                    barbeiro: ${ag.barbeiro_nome} (código ${ag.barbeiro_id}) <br>
+                    cliente: ${ag.cliente_nome} - cpf ${ag.cliente_cpf} <br>
                     <input type="datetime-local" id="data-${ag.id}">
                     <button onclick="atualizarData(${ag.id})">atualizar data</button>
                 </div>`
@@ -96,7 +96,7 @@ E a chamada, SEMPRE na última linha do script (acima do </script>):
 // <<<
 
 // - A API já devolve os agendamentos ordenados por data. O front só mostra na ordem que chegou.
-// - Mostramos TODOS os dados do barbeiro e do cliente.
+// - Mostramos os dados do barbeiro e do cliente (o cpf e a senha do barbeiro não vêm: estão em hash).
 // - Cada campo precisa ter o mesmo nome do apelido (AS) usado no SELECT da API (ag.barbeiro_nome, ag.cliente_nome...).
 // - formatarData() vem do scripts.js.
 // - Em cada item há um campo de data e um botão. O id do campo usa o id do agendamento (data-${ag.id}),
@@ -119,7 +119,7 @@ Cole ACIMA da linha carregarAgendamentos() do final:
                 return
             }
 
-            const dados = await api(`/agendamentos/${id}`, 'PUT', { data_agendamento: novaData })
+            const dados = await api(`/agendamentos/${id}`, 'PUT', { data_hora: novaData })
             alert(dados.message)
             carregarAgendamentos()
         }
@@ -127,7 +127,7 @@ Cole ACIMA da linha carregarAgendamentos() do final:
 
 // - O botão atualizar data da linha chama atualizarData(${ag.id}), então a função recebe o id certo.
 // - Lemos o campo da MESMA linha com getElementById(`data-${id}`).
-// - O PUT leva só a data nova no body: { data_agendamento: novaData }.
+// - O PUT leva só a data nova no body: { data_hora: novaData }.
 // - Depois de atualizar, carregarAgendamentos() busca a lista de novo e ela já aparece na nova ordem.
 //
 // Teste: escolha uma data bem antiga em um agendamento e clique em atualizar data. Ele sobe para o topo da lista.
@@ -142,8 +142,7 @@ Os campos e o botão. Cole no HTML ACIMA do comentário "Listagem ordenada por d
     <h3>Novo agendamento</h3>
 
     <div id="formulario">
-        <input type="datetime-local" id="data_agendamento">
-        <input type="text" placeholder="serviço (ex: corte + barba)" id="servico">
+        <input type="datetime-local" id="data_hora">
         <select id="barbeiro_id">
             <option value="">barbeiro...</option>
         </select>
@@ -173,8 +172,7 @@ No script, cole ACIMA da linha carregarAgendamentos() do final. Os selects funci
 
         async function cadastrar() {
             const agendamento = {
-                data_agendamento: document.getElementById('data_agendamento').value,
-                servico: document.getElementById('servico').value,
+                data_hora: document.getElementById('data_hora').value,
                 barbeiro_id: document.getElementById('barbeiro_id').value,
                 cliente_id: document.getElementById('cliente_id').value
             }
@@ -182,8 +180,7 @@ No script, cole ACIMA da linha carregarAgendamentos() do final. Os selects funci
             const dados = await api('/agendamentos', 'POST', agendamento)
             alert(dados.message)
 
-            document.getElementById('data_agendamento').value = ''
-            document.getElementById('servico').value = ''
+            document.getElementById('data_hora').value = ''
             document.getElementById('barbeiro_id').value = ''
             document.getElementById('cliente_id').value = ''
             carregarAgendamentos()
@@ -196,7 +193,7 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
         carregarSelects()
 // <<<
 
-// Teste: crie um agendamento escolhendo data, serviço, barbeiro e cliente. Ele aparece na lista, na posição da data.
+// Teste: crie um agendamento escolhendo data, barbeiro e cliente. Ele aparece na lista, na posição da data.
 ```
 
 ## Conferência final
@@ -210,7 +207,7 @@ E chame os selects no final do script, ACIMA da linha carregarAgendamentos():
 
 ```js
 - A data aparece "Invalid Date": o campo da API tem outro nome (confira o apelido no SELECT e no Network do F12).
-- A lista não está ordenada: faltou o ORDER BY data_agendamento no GET /agendamentos.
+- A lista não está ordenada: faltou o ORDER BY agendamento.data_hora no GET /agendamentos.
 - A data mudou de horário (algumas horas a mais ou a menos): o JavaScript converteu o fuso. Mande a data como veio do input
   (2026-11-17T08:30) e deixe o Postgres guardar como TIMESTAMP, sem timezone.
 - Atualizou e nada mudou: o botão está lendo o campo errado. Confira se o id do input é data-${ag.id}.

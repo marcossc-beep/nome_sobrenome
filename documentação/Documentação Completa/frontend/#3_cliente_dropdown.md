@@ -57,8 +57,7 @@ as outras opções serão colocadas pelo JavaScript no passo 2.
 
     <div id="formulario">
         <input type="text" placeholder="nome" id="nome">
-        <input type="text" placeholder="telefone" id="telefone">
-        <input type="text" placeholder="estilo de corte" id="estilo_corte">
+        <input type="text" placeholder="cpf" id="cpf">
 
         <!-- O cliente precisa ser associado a um barbeiro -->
         <select id="barbeiro_id">
@@ -124,8 +123,7 @@ Cole abaixo da função anterior:
                 lista.innerHTML += `
                 <div class="item">
                     <b>${cliente.nome}</b> <br>
-                    telefone: ${cliente.telefone || ''} <br>
-                    estilo de corte: ${cliente.estilo_corte || ''} <br>
+                    cpf: ${cliente.cpf} <br>
                     barbeiro: ${cliente.barbeiro_nome}
                 </div>`
             })
@@ -145,8 +143,7 @@ e bloqueamos o envio com um aviso:
         async function cadastrar() {
             const cliente = {
                 nome: document.getElementById('nome').value,
-                telefone: document.getElementById('telefone').value,
-                estilo_corte: document.getElementById('estilo_corte').value,
+                cpf: document.getElementById('cpf').value,
                 barbeiro_id: document.getElementById('barbeiro_id').value
             }
 
@@ -159,8 +156,7 @@ e bloqueamos o envio com um aviso:
             alert(dados.message)
 
             document.getElementById('nome').value = ''
-            document.getElementById('telefone').value = ''
-            document.getElementById('estilo_corte').value = ''
+            document.getElementById('cpf').value = ''
             document.getElementById('barbeiro_id').value = ''
             carregarClientes()
         }
