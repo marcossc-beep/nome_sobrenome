@@ -1,2 +1,2 @@
 -- SAEP 2026 - Simulado Barbearia - saep_db.sql
--- Consulte: documentação/Documentação Simplificada/SQL.md
+-- Consulte: documentação/Documentação Simplificada/#2_SQL.md ou documentação/Documentação Completa/backend/#0_SQL.md

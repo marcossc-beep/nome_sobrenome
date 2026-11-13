@@ -3,7 +3,6 @@
 Este repositório traz a documentação que usamos em aula para montar um sistema completo:
 banco de dados no PostgreSQL, API com Fastify e front-end em HTML, CSS e JavaScript.
 O exemplo de toda a documentação é uma **barbearia** (barbeiros, clientes e agendamentos).
-No simulado e na prova o tema é outro: use a documentação como modelo e adapte para o tema pedido.
 
 ## Como abrir
 
@@ -22,21 +21,38 @@ npm install
 npm start
 ```
 
-## Onde está cada assunto
+## Escolha UM caminho e siga até o fim
 
-| Assunto | Documentação Simplificada (consulta rápida) | Documentação Completa (passo a passo) |
+As duas documentações montam o sistema inteiro, cada uma do seu jeito. Não misture as duas no mesmo `server.js`:
+as rotas têm os mesmos nomes e a API para com o erro `Method ... already declared for route`.
+
+### Documentação Simplificada (sem criptografia)
+
+Login com CPF e senha guardados como texto, sessão com tempo de expiração no navegador.
+
+| Ordem | Arquivo | O que tem |
 |---|---|---|
-| Banco de dados: tabelas, INSERT, SELECT, JOIN | `SQL.md` | `backend/#0_SQL.md` |
-| DER (der.png pelo pgAdmin) | | `backend/#0_SQL.md` (passo 13) |
-| Busca por termo e listagem com JOIN | `API.md` | `backend/#1_busca_e_JOIN.md` |
-| Cadastro com chave estrangeira e atualizar data | `API.md` | `backend/#2_cliente_e_agendamento_API.md` |
-| Criptografia do CPF e da senha | `SQL.md` e `API.md` (pgcrypto) | `backend/#3_criptografia_e_login.md` (bcrypt) |
-| Login e sessão com JWT | | `backend/#3_criptografia_e_login.md` |
-| Testes com REST Client | `referencias.md` | dentro de cada arquivo |
-| Front: fetch, CORS, tela de login e tela principal | | `frontend/#1_fetch_cors_login.md` |
-| Front: listar, buscar, cadastrar, editar e excluir | | `frontend/#2_crud_barbeiro.md` |
-| Front: cadastro com lista de escolha (select) | | `frontend/#3_cliente_dropdown.md` |
-| Front: agendamentos ordenados e atualizar a data | | `frontend/#4_agendamentos.md` |
+| 1 | `#1_documentacao.md` | Anexo 1: requisitos funcionais e de infraestrutura |
+| 2 | `#2_SQL.md` | tabelas, INSERT, SELECT, JOIN, o `saep_db.sql` completo e o DER |
+| 3 | `#3_API.md` | todas as rotas, uma por vez, e o `server.js` completo no fim |
+| 4 | `#4_referencias.md` | testes no REST Client (`referencias.http`) |
+| 5 | `#5_FRONT.md` | todas as telas da pasta FRONT, cada arquivo completo |
+
+### Documentação Completa (com bcrypt e JWT)
+
+CPF e senha criptografados com bcrypt na API e sessão com token JWT que expira.
+
+| Ordem | Arquivo | O que tem |
+|---|---|---|
+| 0 | `#0_documentacao.md` | Anexo 1: requisitos funcionais e de infraestrutura |
+| 1 | `backend/#0_SQL.md` | banco passo a passo, o `saep_db.sql` completo e o DER |
+| 2 | `backend/#1_servidor_login_e_criptografia.md` | projeto, conexão, bcrypt, JWT, login e rotas de barbeiro |
+| 3 | `backend/#2_busca_e_JOIN.md` | busca por termo e listagens com JOIN |
+| 4 | `backend/#3_cliente_e_agendamento_API.md` | cliente, agendamento e o `server.js` completo no fim |
+| 5 | `frontend/#1_fetch_cors_login.md` | fetch, sessão, tela de login e tela principal |
+| 6 | `frontend/#2_crud_barbeiro.md` | listar, buscar, cadastrar, editar e excluir |
+| 7 | `frontend/#3_cliente_dropdown.md` | cadastro com lista de escolha (select) |
+| 8 | `frontend/#4_agendamentos.md` | agendamentos ordenados e atualizar a data |
 
 ## Documentação de software (Anexo 1) pelo VS Code
 

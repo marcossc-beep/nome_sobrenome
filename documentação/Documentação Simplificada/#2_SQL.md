@@ -15,11 +15,9 @@ O SQL (Structured Query Language) é a linguagem que usamos para criar as tabela
 
 ```sql
 - SERIAL: Cria um número inteiro sequencial automático (1, 2, 3...) a cada cadastro. Usado para a Chave Primária (id).
-- VARCHAR(255): Texto com limite fixo de caracteres. Ideal para nomes, CPF, senhas e telefones.
+- VARCHAR(255): Texto com limite fixo de caracteres. Ideal para nomes, CPF e senhas.
 - INT: Números inteiros sem casas decimais (ex: chaves estrangeiras).
 - TIMESTAMP: Armazena data e hora juntas (ex: 2026-11-20 14:00:00).
-
-OBS: use VARCHAR(255) em cpf e senha. Quando forem criptografados (bcrypt), o valor guardado vira um hash de 60 caracteres e não cabe em VARCHAR(20).
 ```
 
 ## Regras e Restrições (Constraints)
@@ -49,6 +47,7 @@ No pgAdmin, crie o banco e abra o Query Tool DENTRO dele (botão direito no banc
 - A tabela do lado "muitos" leva a chave estrangeira (cliente leva barbeiro_id).
 - O agendamento liga as duas e por isso leva DUAS chaves estrangeiras (barbeiro_id e cliente_id).
 - Crie primeiro quem não depende de ninguém (barbeiro), depois cliente e por último agendamento.
+- O barbeiro é quem faz login no sistema, por isso a tabela dele tem cpf e senha.
 ```
 
 ## Criação de Tabelas (DDL)
@@ -97,6 +96,7 @@ CREATE TABLE agendamento (
 - O nome da tabela é o mesmo do CREATE TABLE (agendamento, não "agendamentos").
 
 -- Inserindo 3 Barbeiros (os ids saem sozinhos: 1, 2 e 3)
+-- O cpf e a senha daqui são os que você usa para entrar no sistema (ex: 111.222.333-44 e senha123).
 
 INSERT INTO barbeiro (nome, cpf, senha) VALUES
 ('Carlos Silva', '111.222.333-44', 'senha123'),
@@ -133,15 +133,18 @@ SELECT * FROM agendamento;
 -- Buscar todos os campos de todos os barbeiros
 SELECT * FROM barbeiro;
 
--- Buscar apenas id e nome (cpf e senha ficam de fora: vão estar criptografados)
-SELECT id, nome FROM barbeiro;
+-- Buscar apenas algumas colunas (a senha fica de fora)
+SELECT id, nome, cpf FROM barbeiro;
 
 -- Filtrar busca por ID
 SELECT * FROM barbeiro WHERE id = 1;
 
+-- Conferir login: só traz o barbeiro se o cpf E a senha baterem (é o SQL da rota de login)
+SELECT id, nome FROM barbeiro WHERE cpf = '111.222.333-44' AND senha = 'senha123';
+
 -- Busca por termo (ILIKE ignora maiúsculas/minúsculas e o % vale por "qualquer texto")
 -- Este é o padrão SQL utilizado na rota GET com filtro da API:
-SELECT id, nome FROM barbeiro WHERE nome ILIKE '%ana%' ORDER BY id ASC;
+SELECT id, nome, cpf FROM barbeiro WHERE nome ILIKE '%ana%' ORDER BY id ASC;
 
 -- Ordenar pela data (ASC = mais antiga primeiro)
 SELECT * FROM agendamento ORDER BY data_hora ASC;
@@ -155,20 +158,24 @@ O INNER JOIN serve para relacionar e exibir na mesma consulta dados que estão d
 // 1) JOIN Simples entre 2 Tabelas (Cliente + Barbeiro Responsável):
 
 SELECT
-    cliente.id AS id_cliente,
-    cliente.nome AS nome_cliente,
-    cliente.cpf AS cpf_cliente,
-    barbeiro.nome AS barbeiro_responsavel
+    cliente.id,
+    cliente.nome,
+    cliente.cpf,
+    barbeiro.nome AS barbeiro_nome
 FROM cliente
-INNER JOIN barbeiro ON cliente.barbeiro_id = barbeiro.id;
+INNER JOIN barbeiro ON cliente.barbeiro_id = barbeiro.id
+ORDER BY cliente.id;
 
 
-// 2) JOIN Triplo entre 3 Tabelas (Agendamento + Barbeiro + Cliente), ordenado por data:
+// 2) JOIN Triplo entre 3 Tabelas (Agendamento + Barbeiro + Cliente), ordenado por data, com os dados dos dois:
 
 SELECT
-    agendamento.id AS id_agendamento,
+    agendamento.id,
     agendamento.data_hora,
+    barbeiro.id AS barbeiro_id,
     barbeiro.nome AS barbeiro_nome,
+    barbeiro.cpf AS barbeiro_cpf,
+    cliente.id AS cliente_id,
     cliente.nome AS cliente_nome,
     cliente.cpf AS cliente_cpf
 FROM agendamento
@@ -190,7 +197,7 @@ ORDER BY agendamento.data_hora ASC;
 UPDATE agendamento SET data_hora = '2026-11-25 09:00:00' WHERE id = 1;
 
 -- Atualizando dados de um barbeiro pelo ID
-UPDATE barbeiro SET nome = 'Carlos Silva Souza', senha = 'novasenha123' WHERE id = 1;
+UPDATE barbeiro SET nome = 'Carlos Silva Souza', cpf = '111.222.333-44' WHERE id = 1;
 
 
 // 2. DELETE (Deletar / Remover dados)
@@ -203,18 +210,77 @@ DELETE FROM barbeiro WHERE id = 3;
 -- Sem o CASCADE, o banco recusaria o DELETE de um barbeiro que tem clientes e agendamentos (erro de chave estrangeira).
 ```
 
-## Criptografando CPF e senha direto no SQL (LGPD)
+## O arquivo saep_db.sql completo
 
 ```sql
--- A LGPD pede que dados pessoais fiquem protegidos. Coloque estas linhas no FIM do saep_db.sql:
--- a extensão pgcrypto transforma o cpf e a senha em um hash (o mesmo tipo do bcrypt, gen_salt('bf')).
--- O CREATE EXTENSION também libera o crypt() que a API usa no cadastro e na edição (veja o POST e o PUT do API.md).
+-- Este é o conteúdo do saep_db.sql (raiz do projeto). Rode inteiro no Query Tool, DENTRO do banco saep_db.
+-- O DROP da primeira linha apaga as tabelas antigas: assim o script pode ser rodado de novo quantas vezes precisar.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-UPDATE barbeiro SET cpf = crypt(cpf, gen_salt('bf')), senha = crypt(senha, gen_salt('bf'));
-
--- Rode UMA vez só (se rodar de novo vira hash do hash).
--- Para refazer do zero, apague as tabelas e rode o script inteiro de novo:
 DROP TABLE IF EXISTS agendamento, cliente, barbeiro;
+
+CREATE TABLE barbeiro (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE cliente (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL,
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE
+);
+
+CREATE TABLE agendamento (
+    id SERIAL PRIMARY KEY,
+    data_hora TIMESTAMP NOT NULL,
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE,
+    cliente_id INT NOT NULL REFERENCES cliente(id) ON DELETE CASCADE
+);
+
+INSERT INTO barbeiro (nome, cpf, senha) VALUES
+('Carlos Silva', '111.222.333-44', 'senha123'),
+('Ana Souza', '222.333.444-55', 'senha456'),
+('Marcos Oliveira', '333.444.555-66', 'senha789');
+
+INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES
+('Pedro Santos', '444.555.666-77', 3),
+('Juliana Costa', '555.666.777-88', 2),
+('Rafael Lima', '666.777.888-99', 1);
+
+INSERT INTO agendamento (data_hora, barbeiro_id, cliente_id) VALUES
+('2026-11-20 14:00:00', 1, 1),
+('2026-11-18 10:30:00', 2, 2),
+('2026-11-19 16:00:00', 3, 3);
+```
+
+## Gerando o DER no pgAdmin (der.png)
+
+```sql
+1. No pgAdmin, depois de criar as tabelas, clique com o botão direito no banco (saep_db).
+2. Escolha "ERD For Database" (em algumas versões o nome é "Generate ERD").
+3. Confira se as 3 tabelas aparecem e se as setas ligam: cliente > barbeiro, agendamento > barbeiro e agendamento > cliente.
+4. Na barra do diagrama use o ícone de imagem ("Download image") e salve como PNG.
+5. Renomeie para der.png e coloque na raiz do projeto.
+```
+
+## Conferência final
+
+```sql
+[ ] o saep_db.sql roda inteiro, do zero, sem erro
+[ ] cada relacionamento tem sua chave estrangeira (REFERENCES)
+[ ] as 3 tabelas têm pelo menos 3 registros
+[ ] der.png na raiz, com as 3 tabelas e as ligações
+```
+
+## Erros comuns
+
+```sql
+- relation "agendamentos" does not exist: o nome da tabela no INSERT é diferente do CREATE TABLE (plural a mais ou a menos).
+- null value in column "senha" violates not-null constraint: faltou a coluna senha no INSERT (ou o valor).
+- insert or update on table "cliente" violates foreign key constraint: o barbeiro_id (ou cliente_id) apontado não existe.
+- relation "barbeiro" already exists: o script foi rodado de novo sem o DROP da primeira linha.
+- column "id" is ambiguous: no JOIN, escreva tabela.coluna.
+- As tabelas foram criadas no banco errado: confira qual banco está selecionado antes de abrir o Query Tool.
 ```

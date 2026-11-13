@@ -4,7 +4,7 @@
 //
 // Pré-requisitos: a API com as rotas de barbeiro, o scripts.js e a sessão prontos (#1_fetch_cors_login.md).
 // Rotas da API que esta tela usa: GET /barbeiros (com ?busca=termo), POST /barbeiros, PUT /barbeiros/:id
-// e DELETE /barbeiros/:id (veja ../backend/#3_criptografia_e_login.md e ../backend/#1_busca_e_JOIN.md).
+// e DELETE /barbeiros/:id (veja ../backend/#1_servidor_login_e_criptografia.md e ../backend/#2_busca_e_JOIN.md).
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só ACRESCENTA código ao arquivo
 // FRONT/barbeiros.html, nada do que você já fez precisa ser apagado.
@@ -182,7 +182,7 @@ A primeira só limpa os campos depois de cadastrar (querySelectorAll pega todos 
 //
 // Teste: cadastre um barbeiro. Ele deve aparecer na lista.
 // Confira a criptografia: abra o pgAdmin e rode SELECT * FROM barbeiro; o cpf e a senha do novo barbeiro devem estar em hash
-// ($2b$10$...). Se estiverem em texto puro, a criptografia da API (../backend/#3_criptografia_e_login.md) não está aplicada.
+// ($2b$10$...). Se estiverem em texto puro, a criptografia da API (../backend/#1_servidor_login_e_criptografia.md) não está aplicada.
 ```
 
 ## Passo 4: excluir (D)
@@ -212,7 +212,7 @@ Cole ACIMA da linha carregar() do final:
 
 ```js
 O usuário digita o termo, confirma (botão buscar) e a lista mostra só os registros que combinam.
-O botão limpar busca volta para a lista completa. A parte da API (?busca= e ILIKE) está em ../backend/#1_busca_e_JOIN.md.
+O botão limpar busca volta para a lista completa. A parte da API (?busca= e ILIKE) está em ../backend/#2_busca_e_JOIN.md.
 
 No HTML, cole ACIMA da linha <div id="lista"></div>:
 

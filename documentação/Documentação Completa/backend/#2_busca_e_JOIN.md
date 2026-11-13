@@ -2,8 +2,8 @@
 
 ```js
 //
-// As rotas abaixo já aparecem com { preHandler: autenticar }, a função definida em #3_criptografia_e_login.md.
-// Enquanto você não criar a função autenticar, deixe essa parte de fora das rotas.
+// As rotas deste arquivo entram no server.js ABAIXO das rotas de barbeiro do #1 e ACIMA do listen.
+// Elas usam { preHandler: autenticar }, a função do #1_servidor_login_e_criptografia.md.
 ```
 
 ## Busca por termo

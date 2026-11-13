@@ -4,7 +4,7 @@
 //
 // Pré-requisitos: o scripts.js e a sessão prontos (#1_fetch_cors_login.md) e as rotas de cliente na API.
 // Rotas da API que esta tela usa: GET /barbeiros, GET /clientes e POST /clientes
-// (veja ../backend/#1_busca_e_JOIN.md e ../backend/#2_cliente_e_agendamento_API.md).
+// (veja ../backend/#2_busca_e_JOIN.md e ../backend/#3_cliente_e_agendamento_API.md).
 //
 // Como usar este arquivo: siga os passos NA ORDEM. Cada passo só acrescenta código.
 // As linhas "// >>> arquivo" e "// <<<" só marcam onde o código começa e termina.
@@ -130,7 +130,7 @@ Cole abaixo da função anterior:
         }
 // <<<
 
-// ${cliente.barbeiro_nome} vem do JOIN do GET /clientes (../backend/#1_busca_e_JOIN.md).
+// ${cliente.barbeiro_nome} vem do JOIN do GET /clientes (../backend/#2_busca_e_JOIN.md).
 ```
 
 ## Passo 4: cadastrar o cliente

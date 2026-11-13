@@ -2,7 +2,7 @@
 
 ```js
 //
-// Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#3_criptografia_e_login.md).
+// Pré-requisito: a API pronta, com a rota POST /login (arquivo ../backend/#1_servidor_login_e_criptografia.md).
 // Rotas da API que as telas deste arquivo usam: POST /login.
 // Para treinar só o front-end, a API precisa estar rodando com as rotas citadas em cada arquivo.
 //
@@ -34,14 +34,14 @@ Para conversar, o front usa o fetch, o mesmo que você usou no cadastrar() e no 
 ```js
 Como o front e a API são "endereços" diferentes, o navegador bloqueia a conversa por segurança.
 Esse bloqueio se chama CORS. Para liberar, a API diz ao navegador que aceita as chamadas.
-No server.js, logo abaixo do const servidor = Fastify(), registre o cors:
+O cors já foi registrado no server.js (passo 2 do ../backend/#1_servidor_login_e_criptografia.md), assim:
 
-// >>> server.js
-servidor.register(cors, {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
-})
-// <<<
+    servidor.register(cors, {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE']
+    })
+
+Não registre de novo: o register(cors) aparece UMA vez só no server.js.
 
 // ATENÇÃO: o @fastify/cors libera por padrão só GET, HEAD e POST.
 // Se você esquecer de listar PUT e DELETE em methods, o editar e o excluir falham no navegador

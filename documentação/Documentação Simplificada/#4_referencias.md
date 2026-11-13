@@ -17,6 +17,30 @@ O REST Client é uma extensão do VS Code que permite testar as rotas da API dir
 
 ## Exemplos para o arquivo referencias.http:
 
+### Login certo (POST)
+
+```http
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "senha123"
+}
+```
+
+### Login com senha errada (esperado: 401)
+
+```http
+POST http://localhost:6767/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "errada"
+}
+```
+
 ### Buscar todos os barbeiros (GET)
 
 ```http
@@ -50,15 +74,14 @@ Content-Type: application/json
 
 {
     "nome": "Carlos Silva Souza",
-    "cpf": "111.222.333-44",
-    "senha": "senha123"
+    "cpf": "111.222.333-44"
 }
 ```
 
 ### Deletar um barbeiro por ID (DELETE)
 
 ```http
-DELETE http://localhost:6767/barbeiros/1
+DELETE http://localhost:6767/barbeiros/3
 ```
 
 ### Cadastrar um cliente ligado a um barbeiro (POST com chave estrangeira)
@@ -97,6 +120,7 @@ Content-Type: application/json
 // 200  deu certo
 // 201  criado (cadastrar)
 // 400  faltou dado ou dado inválido
+// 401  login recusado (cpf ou senha errados)
 // 404  o registro não existe
 // 500  erro no servidor (veja a mensagem no terminal onde roda o npm start)
 ```
@@ -105,6 +129,32 @@ Content-Type: application/json
 
 ```http
 @api = http://localhost:6767
+
+### ---------- LOGIN ----------
+
+### Login certo
+POST {{api}}/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "senha123"
+}
+
+### Login errado (esperado: 401)
+POST {{api}}/login
+Content-Type: application/json
+
+{
+    "cpf": "111.222.333-44",
+    "senha": "errada"
+}
+
+### Login sem dados (esperado: 400)
+POST {{api}}/login
+Content-Type: application/json
+
+{}
 
 ### ---------- BARBEIROS ----------
 
@@ -130,8 +180,7 @@ Content-Type: application/json
 
 {
     "nome": "Carlos Silva Souza",
-    "cpf": "111.222.333-44",
-    "senha": "senha123"
+    "cpf": "111.222.333-44"
 }
 
 ### Excluir pelo id
@@ -139,7 +188,7 @@ DELETE {{api}}/barbeiros/3
 
 ### ---------- CLIENTES (pertencem a um barbeiro) ----------
 
-### Listar todos
+### Listar todos (com o nome do barbeiro)
 GET {{api}}/clientes
 
 ### Cadastrar ligado a um barbeiro

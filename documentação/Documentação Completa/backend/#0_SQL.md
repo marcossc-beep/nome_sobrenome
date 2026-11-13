@@ -54,8 +54,6 @@ responde "value too long for type character varying(20)".
 ```sql
 - PRIMARY KEY: identificador único da linha. Não repete e não pode ser nulo.
 - NOT NULL: a coluna é obrigatória. Se você esquecer de preenchê-la no INSERT, o banco dá erro.
-- UNIQUE: não deixa existir dois registros com o mesmo valor. Não usamos no CPF do barbeiro: ele vai ser criptografado
-  com bcrypt, e o mesmo CPF vira um hash diferente a cada vez, então o UNIQUE não teria efeito.
 - REFERENCES tabela(id): cria a chave estrangeira (FK), ligando este registro ao id de outra tabela.
 - ON DELETE CASCADE: se o registro "pai" for apagado, os "filhos" ligados a ele são apagados juntos.
   Sem isso, apagar um pai que tem filhos dá erro de chave estrangeira.
@@ -133,12 +131,24 @@ Regras do INSERT:
 - O nome da tabela é o mesmo do CREATE TABLE: se você criou "agendamento", é INSERT INTO agendamento (e não "agendamentos").
 - Texto e data vão entre aspas simples.
 
+O barbeiro é quem faz login, e o CPF e a senha dele ficam criptografados (LGPD). Quem criptografa é o bcrypt, na API
+(../backend/#1_servidor_login_e_criptografia.md). O banco só guarda. Como os 3 primeiros barbeiros entram pelo script,
+e não pela API, o INSERT já leva o hash pronto, gerado pelo bcrypt. Os valores originais estão no comentário de cada linha:
+é com eles que você entra no sistema.
+
 // >>> sql
 INSERT INTO barbeiro (nome, cpf, senha) VALUES
-('Carlos Silva', '111.222.333-44', 'senha123'),
-('Ana Souza', '222.333.444-55', 'senha456'),
-('Marcos Oliveira', '333.444.555-66', 'senha789');
+-- cpf 111.222.333-44 / senha senha123
+('Carlos Silva', '$2b$10$MADf5EqPMWp0mXYXmrlpnewXD3fnnXD9dSrcZAKXgV3t2/ka.bq5a', '$2b$10$umkwr6hMlx8hvPp4l0AF9.h3lWdxNcXmOBjcEq8VKChX7dVm6MIu2'),
+-- cpf 222.333.444-55 / senha senha456
+('Ana Souza', '$2b$10$1r.JLaPtRs4uwzeVkdh/vec3UO2njeSkWh6vYUNGjiPyi95Vk1KP.', '$2b$10$9TBYUgRRq8epWcJzhBZk3eBx5tJZxyveNJBTiw6UEDhSlUoYHKw9O'),
+-- cpf 333.444.555-66 / senha senha789
+('Marcos Oliveira', '$2b$10$RTGnpivk7p.16j/NMG0BoetTbBVDKvqjl5wFFXQIIDX6bIvXgMyHi', '$2b$10$qL6W.fZ8mVEqIMYbtsz6zeg72o0PrQDZG2RumJq0BlRv9IOefCDSK');
 // <<<
+
+// Para gerar o hash de outro texto (ex: outra senha), rode no terminal do VS Code, dentro do projeto:
+//     node -e "import('bcrypt').then(b => b.default.hash('senha123', 10)).then(console.log)"
+// e cole o resultado no lugar, entre aspas simples.
 
 Os ids foram gerados sozinhos: Carlos = 1, Ana = 2, Marcos = 3. As próximas tabelas apontam para esses números.
 
@@ -207,7 +217,7 @@ SELECT * FROM cliente WHERE nome ILIKE '%ra%' OR cpf ILIKE '%444%' ORDER BY id;
 
 // - '%ana%' acha "Juliana", "Ana Souza", "Mariana"... (qualquer nome que tenha "ana" dentro).
 // - LIKE comum diferencia maiúscula de minúscula; ILIKE não.
-// - Na API (documentação API.md, seção Busca por termo) o termo vem da URL e entra no lugar do texto fixo.
+// - Na API (#2_busca_e_JOIN.md) o termo vem da URL e entra no lugar do texto fixo.
 // - Colunas que guardam HASH (cpf do barbeiro, senha) não servem para busca: o hash não se parece com o texto original.
 ```
 
@@ -315,6 +325,51 @@ DROP TABLE IF EXISTS agendamento, cliente, barbeiro;
 // quantas vezes você quiser. Sem ele, rodar duas vezes dá "relation already exists".
 
 Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
+
+O saep_db.sql completo, juntando os passos 5, 6 e o DROP:
+
+// >>> saep_db.sql
+DROP TABLE IF EXISTS agendamento, cliente, barbeiro;
+
+CREATE TABLE barbeiro (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE cliente (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(255) NOT NULL,
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE
+);
+
+CREATE TABLE agendamento (
+    id SERIAL PRIMARY KEY,
+    data_hora TIMESTAMP NOT NULL,
+    barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE,
+    cliente_id INT NOT NULL REFERENCES cliente(id) ON DELETE CASCADE
+);
+
+INSERT INTO barbeiro (nome, cpf, senha) VALUES
+-- cpf 111.222.333-44 / senha senha123
+('Carlos Silva', '$2b$10$MADf5EqPMWp0mXYXmrlpnewXD3fnnXD9dSrcZAKXgV3t2/ka.bq5a', '$2b$10$umkwr6hMlx8hvPp4l0AF9.h3lWdxNcXmOBjcEq8VKChX7dVm6MIu2'),
+-- cpf 222.333.444-55 / senha senha456
+('Ana Souza', '$2b$10$1r.JLaPtRs4uwzeVkdh/vec3UO2njeSkWh6vYUNGjiPyi95Vk1KP.', '$2b$10$9TBYUgRRq8epWcJzhBZk3eBx5tJZxyveNJBTiw6UEDhSlUoYHKw9O'),
+-- cpf 333.444.555-66 / senha senha789
+('Marcos Oliveira', '$2b$10$RTGnpivk7p.16j/NMG0BoetTbBVDKvqjl5wFFXQIIDX6bIvXgMyHi', '$2b$10$qL6W.fZ8mVEqIMYbtsz6zeg72o0PrQDZG2RumJq0BlRv9IOefCDSK');
+
+INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES
+('Pedro Santos', '444.555.666-77', 3),
+('Juliana Costa', '555.666.777-88', 2),
+('Rafael Lima', '666.777.888-99', 1);
+
+INSERT INTO agendamento (data_hora, barbeiro_id, cliente_id) VALUES
+('2026-11-20 14:00:00', 1, 1),
+('2026-11-18 10:30:00', 2, 2),
+('2026-11-19 16:00:00', 3, 3);
+// <<<
 ```
 
 ## Passo 13: gerando o DER no pgAdmin (der.png)
@@ -349,7 +404,7 @@ Banco: o script roda DENTRO do saep_db (Query Tool aberto no banco saep_db).
 - Os INSERT de uma tabela falham em cascata: se barbeiro não foi populado, cliente e agendamento também falham,
   pois dependem dele. Corrija o primeiro erro e rode de novo do zero.
 - value too long for type character varying(20): a coluna é pequena demais para o hash. Use VARCHAR(255).
-- relation "barbeiro" already exists / duplicate key value violates unique constraint: o script foi rodado duas vezes.
+- relation "barbeiro" already exists: o script foi rodado duas vezes.
   Rode o DROP TABLE do passo 12 e depois o script de novo.
 - column "id" is ambiguous: no JOIN, escreva tabela.coluna.
 - As tabelas foram criadas no banco errado: confira no pgAdmin qual banco está selecionado antes de abrir o Query Tool.

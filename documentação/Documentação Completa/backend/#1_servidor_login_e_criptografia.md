@@ -1,15 +1,36 @@
-# Criptografia no back-end (bcrypt + JWT) e rota de login
+# Servidor, criptografia (bcrypt), login e sessão (JWT)
 
 ```js
 //
+// Este arquivo monta o começo do server.js: o projeto, a conexão com o banco, o login e as rotas de barbeiro.
+// Os próximos arquivos (#2 e #3) só acrescentam rotas. No fim do #3 está o server.js completo.
+//
+// ATENÇÃO: cada combinação de método + endpoint só pode existir UMA vez no server.js.
+// Dois servidor.get('/barbeiros', ...) fazem a API parar com o erro:
+//     Method 'GET' already declared for route '/barbeiros'
 ```
 
-## O problema
+## Passo 1: o projeto
+
+```js
+// No terminal, dentro da pasta do projeto:
+//     npm init -y
+//     npm i fastify @fastify/cors @fastify/jwt bcrypt pg
+//
+// No package.json:
+//     "type": "module",
+//     "scripts": { "start": "node --watch server.js" }
+//
+// Para rodar a API:  npm start   (o --watch reinicia a API sozinho quando você salva o server.js)
+// (Neste repositório o package.json já está pronto: basta npm install e depois npm start.)
+```
+
+## O problema que a criptografia resolve
 
 ```js
 Se a senha e o CPF ficam escritos em texto puro no banco, qualquer pessoa que acessar o banco lê tudo.
 A LGPD diz que dados pessoais precisam ficar protegidos.
-Usamos duas ferramentas:
+Usamos duas ferramentas, as duas na API (o banco só guarda o resultado):
 - bcrypt: transforma a senha e o CPF em um "embaralhado" que não volta mais (hash).
 - JWT: um "crachá" digital que o servidor entrega no login e que tem prazo de validade.
 ```
@@ -33,6 +54,7 @@ O bcrypt pega a senha digitada, aplica o mesmo processo e compara com o hash do 
 
 Consequência: o CPF salvo com hash NÃO pode ser mostrado de volta na tela.
 Por isso as listagens de barbeiro não trazem as colunas cpf e senha.
+Os 3 barbeiros do saep_db.sql já entram com hash (veja o passo 6 do #0_SQL.md).
 ```
 
 ## JWT: o crachá com validade
@@ -47,7 +69,7 @@ Um token tem 3 partes separadas por ponto: cabeçalho . dados . assinatura
 Aqui a chave secreta fica direto no código (não precisa de .env nem de variável de ambiente).
 ```
 
-## Imports e configuração do JWT
+## Passo 2: imports, cors, JWT e conexão com o banco
 
 ```js
 import Fastify from 'fastify'
@@ -58,17 +80,31 @@ import { Pool } from 'pg'
 
 const servidor = Fastify()
 
+// O cors libera o front (páginas da pasta FRONT) a chamar a API. PUT e DELETE precisam estar na lista.
+servidor.register(cors, {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+})
+
 servidor.register(jwt, {
     secret: 'saep_barbearia_2026',
     sign: { expiresIn: '30m' }
 })
 
+const sql = new Pool({
+    user: 'postgres',      // usuário do Postgres da sua máquina
+    password: 'senai',     // senha do Postgres da sua máquina
+    host: 'localhost',
+    port: 5432,
+    database: 'saep_db'    // o banco criado no #0_SQL.md
+})
+
 // expiresIn: '30m' = o token vale 30 minutos. Depois disso a API responde 401.
 // Para ver a expiração funcionando, troque para '1m', faça login, espere 1 minuto e chame uma rota protegida.
-// O cors é registrado como mostra a documentação do front-end. A conexão com o banco (Pool) é a da Documentação Simplificada.
+// sql.query('SQL com $1, $2...', [valor1, valor2]) roda o SQL no banco. Os $ evitam SQL injection.
 ```
 
-## A função autenticar (porteiro das rotas)
+## Passo 3: a função autenticar (porteiro das rotas)
 
 ```js
 async function autenticar(request, reply) {
@@ -90,7 +126,7 @@ async function autenticar(request, reply) {
 // A função autenticar precisa estar escrita ANTES das rotas que a usam.
 ```
 
-## Rota POST /login (cpf e senha)
+## Passo 4: rota POST /login (cpf e senha)
 
 ```js
 // Quem faz login é o BARBEIRO (cpf e senha da tabela barbeiro).
@@ -150,12 +186,13 @@ servidor.post('/login', async (request, reply) => {
 // O nome "usuario" na resposta é só o nome da chave: quem está logado é o barbeiro.
 ```
 
-## Criptografando o CPF e a senha do barbeiro
+## Passo 5: cadastrar, editar e excluir barbeiro (com bcrypt)
 
 ```js
 // O POST e o PUT usam bcrypt.hash antes de gravar.
 // No PUT, o CPF e a senha só são trocados se vierem preenchidos, porque na tela de edição
 // o usuário não vê o valor antigo (ele está em hash).
+// A listagem GET /barbeiros (com busca) está em #2_busca_e_JOIN.md.
 
 servidor.post('/barbeiros', { preHandler: autenticar }, async (request, reply) => {
     const body = request.body
@@ -201,28 +238,14 @@ servidor.delete('/barbeiros/:id', { preHandler: autenticar }, async (request, re
     await sql.query('DELETE FROM barbeiro WHERE id = $1', [id])
     reply.status(200).send({ message: 'Barbeiro Deletado!' })
 })
-
-// A listagem GET /barbeiros (com busca) está em #1_busca_e_JOIN.md.
 ```
 
-## Os dados que já estão no banco precisam virar hash
+## Passo 6: listen (última coisa do server.js)
 
 ```js
-// O login compara com bcrypt.compare. Se o CPF e a senha do barbeiro no banco estão em texto puro ("senha123"),
-// o login SEMPRE falha. O jeito mais simples de converter o que já existe é no próprio SQL,
-// com a extensão pgcrypto do Postgres, que gera o mesmo tipo de hash do bcrypt (gen_salt('bf') = bcrypt):
+// Fica SEMPRE no final do server.js. As rotas dos próximos arquivos entram ACIMA dele.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-UPDATE barbeiro SET cpf = crypt(cpf, gen_salt('bf')), senha = crypt(senha, gen_salt('bf'));
-
-// Rode isso UMA vez só, senão faz hash do hash e o login deixa de funcionar.
-// Coloque essas linhas no FIM do saep_db.sql: assim o script, rodado do zero, já deixa o banco pronto para o login.
-// Depois disso, entre com o CPF e a senha que estavam no INSERT (ex.: 111.222.333-44 e senha123).
-//
-// Outro jeito, sem SQL: gerar um hash no terminal e colar no INSERT:
-//
-//     node -e "import('bcrypt').then(b => b.default.hash('senha123', 10)).then(console.log)"
+servidor.listen({ port: 6767 }).then(() => console.log('API da barbearia rodando em http://localhost:6767'))
 ```
 
 ## Testando no referencias.http
@@ -254,21 +277,24 @@ Content-Type: application/json
 
 {}
 
-### Rota protegida SEM token (esperado: 401)
-GET http://localhost:6767/barbeiros
+### Cadastrar barbeiro SEM token (esperado: 401)
+POST http://localhost:6767/barbeiros
+Content-Type: application/json
 
-### Rota protegida COM token (esperado: 200)
-GET http://localhost:6767/barbeiros
-Authorization: Bearer {{token}}
+{
+    "nome": "Thiago Pente",
+    "cpf": "777.888.999-00",
+    "senha": "senha000"
+}
 
-### Cadastrar barbeiro (confira no pgAdmin que cpf e senha ficaram em hash)
+### Cadastrar barbeiro COM token (confira no pgAdmin que cpf e senha ficaram em hash)
 POST http://localhost:6767/barbeiros
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
     "nome": "Thiago Pente",
-    "cpf": "444.555.666-77",
+    "cpf": "777.888.999-00",
     "senha": "senha000"
 }
 ```
@@ -278,11 +304,11 @@ Content-Type: application/json
 ```js
 - "Illegal arguments: string, undefined" no bcrypt.compare: o body veio sem cpf ou sem senha, ou a coluna
   do barbeiro está vazia. Confira o JSON do .http e o SELECT no pgAdmin.
-- Login sempre dá 401 mesmo com a senha certa: o CPF ou a senha do barbeiro no banco estão em texto puro
-  (rode o UPDATE com crypt acima). O CPF do login tem que ser digitado igual ao do INSERT (com pontos e traço).
-- Login deixou de funcionar depois de rodar os UPDATE duas vezes: a senha virou hash de hash. Rode o saep_db.sql do zero.
+- Login sempre dá 401 mesmo com a senha certa: o CPF ou a senha do barbeiro no banco estão em texto puro.
+  Rode o saep_db.sql do #0_SQL.md, que já traz os hashes. O CPF do login tem que ser digitado com pontos e traço.
 - "autenticar is not defined": a função autenticar precisa estar escrita ANTES das rotas que a usam.
 - 401 em tudo: faltou o header Authorization: Bearer <token> no .http, ou o token venceu. Faça login de novo.
+- Method 'POST' already declared for route '/barbeiros': a rota foi escrita duas vezes. Apague uma.
 - No .http, DELETE e GET não levam Content-Type nem body.
 - O CPF do barbeiro não aparece na listagem: é de propósito, ele está em hash.
 ```
