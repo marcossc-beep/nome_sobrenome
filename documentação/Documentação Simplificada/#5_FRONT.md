@@ -11,6 +11,8 @@ Cada página tem os campos (`input` com `id`), os botões (`onclick`), uma `div`
 | `clientes.html` | cadastrar cliente associado a um barbeiro |
 | `agendamentos.html` | listar por data e atualizar a data |
 
+Os comentários explicam cada comando na primeira vez em que ele aparece; nas páginas seguintes, só o que é novo.
+
 ## fetch
 
 ```js
@@ -41,18 +43,18 @@ await fetch(`http://localhost:6767/barbeiros/${id}`, { method: 'DELETE' })
 O login guarda no `localStorage` o usuário e o horário em que a sessão expira (30 minutos). As outras páginas conferem os dois no começo do `<script>`:
 
 ```js
-let usuario = JSON.parse(localStorage.getItem('usuario'))
-let expira = Number(localStorage.getItem('expira'))
+let usuario = JSON.parse(localStorage.getItem('usuario'))   // usuário salvo no login (null se não houver)
+let expira = Number(localStorage.getItem('expira'))         // horário de expiração, convertido para número
 
-if (usuario === null || Date.now() > expira) {
+if (usuario === null || Date.now() > expira) {   // sem login ou sessão vencida
     alert('sessão expirada, faça login novamente')
     sair()
 }
 
 function sair() {
-    localStorage.removeItem('usuario')
+    localStorage.removeItem('usuario')           // apaga a sessão
     localStorage.removeItem('expira')
-    window.location.href = 'index.html'
+    window.location.href = 'index.html'          // volta para o login
 }
 ```
 
@@ -67,54 +69,53 @@ function sair() {
 ## index.html (login)
 
 ```html
-<meta charset="UTF-8">
+<meta charset="UTF-8"> <!-- acentos corretos -->
 <h1>LOGIN</h1>
-<input type="text" placeholder="digite o cpf" id="cpf">
-<input type="password" placeholder="digite a senha" id="senha">
-<button onclick="entrar()">entrar</button>
-<p id="mensagem"></p>
+<input type="text" placeholder="digite o cpf" id="cpf"> <!-- o id é usado no getElementById -->
+<input type="password" placeholder="digite a senha" id="senha"> <!-- password esconde o texto -->
+<button onclick="entrar()">entrar</button> <!-- onclick chama a função ao clicar -->
+<p id="mensagem"></p> <!-- onde aparece a mensagem de erro -->
 <script>
     async function entrar() {
-        let cpf = document.getElementById('cpf').value
+        let cpf = document.getElementById('cpf').value       // .value lê o que foi digitado
         let senha = document.getElementById('senha').value
 
-        if (cpf === '' || senha === '') {
-            document.getElementById('mensagem').innerHTML = 'preencha o cpf e a senha'
+        if (cpf === '' || senha === '') {                    // validação no front: campos vazios
+            document.getElementById('mensagem').innerHTML = 'preencha o cpf e a senha'   // escreve na tela
         } else {
             const resposta = await fetch('http://localhost:6767/login', {
                 method: 'POST',
-                body: JSON.stringify({ cpf, senha }),
+                body: JSON.stringify({ cpf, senha }),        // { cpf, senha } = { cpf: cpf, senha: senha }
                 headers: {
                     'Content-Type': 'application/json'
                 }
             })
-            const dados = await resposta.json()
+            const dados = await resposta.json()              // { message, usuario }
 
-            if (resposta.status === 200) {
-                localStorage.setItem('usuario', JSON.stringify(dados.usuario))
-                localStorage.setItem('expira', Date.now() + 30 * 60 * 1000)
-                window.location.href = 'principal.html'
+            if (resposta.status === 200) {                   // login aceito
+                localStorage.setItem('usuario', JSON.stringify(dados.usuario))     // guarda { id, nome } como texto
+                localStorage.setItem('expira', Date.now() + 30 * 60 * 1000)       // agora + 30 minutos
+                window.location.href = 'principal.html'      // redireciona
             } else {
-                document.getElementById('mensagem').innerHTML = dados.message
+                document.getElementById('mensagem').innerHTML = dados.message     // mensagem da API (401)
             }
         }
     }
 </script>
 ```
 
-Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos!` (mensagem da API, status 401).
-
 ## principal.html
 
 ```html
 <meta charset="UTF-8">
 <h1>PRINCIPAL</h1>
-<p>usuário: <b id="nome"></b></p>
-<a href="barbeiros.html">barbeiros</a>
+<p>usuário: <b id="nome"></b></p> <!-- recebe o nome do usuário logado -->
+<a href="barbeiros.html">barbeiros</a> <!-- links para as outras telas -->
 <a href="clientes.html">clientes</a>
 <a href="agendamentos.html">agendamentos</a>
 <button onclick="sair()">sair</button>
 <script>
+    // sessão (ver Sessão)
     let usuario = JSON.parse(localStorage.getItem('usuario'))
     let expira = Number(localStorage.getItem('expira'))
 
@@ -122,7 +123,7 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
         alert('sessão expirada, faça login novamente')
         sair()
     } else {
-        document.getElementById('nome').innerHTML = usuario.nome
+        document.getElementById('nome').innerHTML = usuario.nome   // mostra o nome guardado no login
     }
 
     function sair() {
@@ -146,10 +147,11 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
 <input type="password" placeholder="digite a senha" id="senha">
 <button onclick="cadastrar()">cadastrar</button>
 <br><br>
-<input type="text" placeholder="buscar por nome" id="busca">
+<input type="text" placeholder="buscar por nome" id="busca"> <!-- termo da busca -->
 <button onclick="visualizar()">buscar</button>
-<div id="lista"></div>
+<div id="lista"></div> <!-- a lista de barbeiros é montada aqui -->
 <script>
+    // sessão (ver Sessão)
     let usuario = JSON.parse(localStorage.getItem('usuario'))
     let expira = Number(localStorage.getItem('expira'))
 
@@ -164,17 +166,17 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
         window.location.href = 'index.html'
     }
 
-    let _barbeiros = []
+    let _barbeiros = []   // barbeiros que vieram da API (o editar usa)
 
     async function visualizar() {
         let busca = document.getElementById('busca').value
-        const resposta = await fetch(`http://localhost:6767/barbeiros?busca=${busca}`)
+        const resposta = await fetch(`http://localhost:6767/barbeiros?busca=${busca}`)   // busca vazia = todos
         _barbeiros = await resposta.json()
 
         let lista = document.getElementById('lista')
-        lista.innerHTML = ''
+        lista.innerHTML = ''                             // limpa antes, senão a lista repete
 
-        _barbeiros.forEach((barbeiro, i) => {
+        _barbeiros.forEach((barbeiro, i) => {            // repete para cada barbeiro; i = posição no array
             lista.innerHTML += `nome: ${barbeiro.nome} - cpf: ${barbeiro.cpf} <br>
                 <button onclick="deletar(${barbeiro.id})">
                     deletar
@@ -183,12 +185,12 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
                     editar
                 </button>
                 <br><br>
-            `
+            `                                            // += soma este HTML ao que já existe
         })
     }
 
     async function cadastrar() {
-        let barbeiro = {
+        let barbeiro = {                                 // objeto com os campos que a API espera
             nome: document.getElementById('nome').value,
             cpf: document.getElementById('cpf').value,
             senha: document.getElementById('senha').value
@@ -202,15 +204,15 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
             }
         })
         const dados = await resposta.json()
-        alert(dados.message)
-        visualizar()
+        alert(dados.message)                             // mensagem da API
+        visualizar()                                     // recarrega a lista
     }
 
     async function editar(i) {
-        let novoNome = prompt('digite o novo nome', _barbeiros[i].nome)
+        let novoNome = prompt('digite o novo nome', _barbeiros[i].nome)   // prompt abre uma caixa já com o valor atual
         let novoCpf = prompt('digite o novo cpf', _barbeiros[i].cpf)
 
-        const resposta = await fetch(`http://localhost:6767/barbeiros/${_barbeiros[i].id}`, {
+        const resposta = await fetch(`http://localhost:6767/barbeiros/${_barbeiros[i].id}`, {   // id do banco na URL
             method: 'PUT',
             body: JSON.stringify({ nome: novoNome, cpf: novoCpf }),
             headers: {
@@ -224,23 +226,18 @@ Falha no login: campos vazios (validação no front) ou `CPF ou senha inválidos
 
     async function deletar(id) {
         const resposta = await fetch(`http://localhost:6767/barbeiros/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE'                             // DELETE não tem body
         })
         const dados = await resposta.json()
         alert(dados.message)
         visualizar()
     }
 
-    visualizar()
+    visualizar()   // lista ao abrir a página
 </script>
 ```
 
-- Busca vazia: `?busca=` sem termo, a API lista todos.
-- `deletar` recebe o `id` do banco; `editar` recebe a posição `i` na lista `_barbeiros`, de onde vêm o nome e o cpf atuais para o `prompt`.
-
 ## clientes.html
-
-O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbeiro_id`.
 
 ```html
 <meta charset="UTF-8">
@@ -250,12 +247,13 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
 <br><br>
 <input type="text" placeholder="digite o nome" id="nome">
 <input type="text" placeholder="digite o cpf" id="cpf">
-<select id="barbeiro_id">
-    <option value="">selecione o barbeiro</option>
+<select id="barbeiro_id"> <!-- lista de escolha: mostra o nome, envia o id -->
+    <option value="">selecione o barbeiro</option> <!-- value vazio = nada escolhido -->
 </select>
 <button onclick="cadastrar()">cadastrar</button>
 <div id="lista"></div>
 <script>
+    // sessão (ver Sessão)
     let usuario = JSON.parse(localStorage.getItem('usuario'))
     let expira = Number(localStorage.getItem('expira'))
 
@@ -277,7 +275,7 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
         barbeiros.forEach((barbeiro) => {
             document.getElementById('barbeiro_id').innerHTML += `
                 <option value="${barbeiro.id}">${barbeiro.nome}</option>
-            `
+            `                                            // uma option por barbeiro: value = id, texto = nome
         })
     }
 
@@ -289,7 +287,7 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
         lista.innerHTML = ''
 
         clientes.forEach((cliente) => {
-            lista.innerHTML += `nome: ${cliente.nome} - cpf: ${cliente.cpf} - barbeiro: ${cliente.barbeiro_nome} <br><br>`
+            lista.innerHTML += `nome: ${cliente.nome} - cpf: ${cliente.cpf} - barbeiro: ${cliente.barbeiro_nome} <br><br>`   // barbeiro_nome vem do JOIN
         })
     }
 
@@ -297,10 +295,10 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
         let cliente = {
             nome: document.getElementById('nome').value,
             cpf: document.getElementById('cpf').value,
-            barbeiro_id: document.getElementById('barbeiro_id').value
+            barbeiro_id: document.getElementById('barbeiro_id').value   // value da option escolhida (id do barbeiro)
         }
 
-        if (cliente.barbeiro_id === '') {
+        if (cliente.barbeiro_id === '') {                // nenhum barbeiro escolhido
             alert('selecione o barbeiro')
         } else {
             const resposta = await fetch('http://localhost:6767/clientes', {
@@ -316,7 +314,7 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
         }
     }
 
-    carregarBarbeiros()
+    carregarBarbeiros()   // preenche o select
     visualizar()
 </script>
 ```
@@ -330,6 +328,7 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
 <button onclick="sair()">sair</button>
 <div id="lista"></div>
 <script>
+    // sessão (ver Sessão)
     let usuario = JSON.parse(localStorage.getItem('usuario'))
     let expira = Number(localStorage.getItem('expira'))
 
@@ -345,7 +344,7 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
     }
 
     async function visualizar() {
-        const resposta = await fetch('http://localhost:6767/agendamentos')
+        const resposta = await fetch('http://localhost:6767/agendamentos')   // já vem ordenado por data
         const agendamentos = await resposta.json()
 
         let lista = document.getElementById('lista')
@@ -359,28 +358,25 @@ O `<select>` mostra o nome do barbeiro e envia o `id` dele (`value`) como `barbe
                     alterar data
                 </button>
                 <br><br>
-            `
+            `                                            // data_formatada: horário de Brasília (ver OBS de fuso no #3_API.md)
         })
     }
 
     async function alterarData(id) {
-        let novaData = prompt('digite a nova data (ano-mês-dia hora:minuto)', '2026-11-25 09:00')
+        let novaData = prompt('digite a nova data (ano-mês-dia hora:minuto)', '2026-11-25 09:00')   // formato aceito pelo TIMESTAMP
 
         const resposta = await fetch(`http://localhost:6767/agendamentos/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ data_hora: novaData }),
+            body: JSON.stringify({ data_hora: novaData }),   // só a data vai no body
             headers: {
                 'Content-Type': 'application/json'
             }
         })
         const dados = await resposta.json()
         alert(dados.message)
-        visualizar()
+        visualizar()                                     // a lista volta reordenada
     }
 
     visualizar()
 </script>
 ```
-
-- A lista exibe `ag.data_formatada` e não `ag.data_hora`: o `data_hora` chega em UTC, com 3 horas a mais (ver a OBS de fuso horário no GET /agendamentos do `#3_API.md`).
-- A nova data vai sem fuso (`2026-11-25 09:00`), no mesmo formato aceito pelo `TIMESTAMP`.
