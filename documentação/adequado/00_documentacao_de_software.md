@@ -1,13 +1,10 @@
 # Documentação de software (Anexo 1)
 
-Entregável: `documentacao.pdf`, gerado a partir do `documentacao.md` da raiz do projeto.
-
-Exportação pelo VS Code (extensão Markdown PDF): botão direito dentro do texto > **Markdown PDF: Export (pdf)**.
-O PDF é criado na mesma pasta do `.md`.
+Entregável: `documentacao.pdf`, gerado a partir do `documentacao.md` da raiz do projeto (exportação descrita em `03_vscode_rest_client.md`, seção Markdown PDF).
 
 ## Requisitos funcionais
 
-Descrevem o que o sistema faz, do ponto de vista de quem usa. São escritos a partir da contextualização e das regras de negócio do caderno de prova.
+Descrevem o que o sistema faz, do ponto de vista de quem usa. Saem da contextualização e das regras de negócio do caderno de prova.
 
 Formato: `O sistema deve permitir...` / `O sistema deve exibir...`
 
@@ -23,17 +20,16 @@ Formato: `O sistema deve permitir...` / `O sistema deve exibir...`
 | RF06 | Cadastrar e editar barbeiro | O sistema deve permitir cadastrar um barbeiro e editar os dados de um barbeiro já cadastrado. |
 | RF07 | Cadastrar cliente | O sistema deve permitir cadastrar um cliente associado a um barbeiro. |
 | RF08 | Agendamentos | O sistema deve listar os agendamentos ordenados por data, com os dados do barbeiro e do cliente, e permitir atualizar a data de um agendamento. |
-
-Outros requisitos do mesmo sistema:
-
-| ID | Requisito | Descrição |
-|---|---|---|
 | RF09 | Proteção de dados | O sistema deve armazenar o CPF e a senha de forma criptografada (LGPD). |
 | RF10 | Cadastrar agendamento | O sistema deve permitir cadastrar um agendamento escolhendo o barbeiro, o cliente e a data. |
 
 ## Requisitos de infraestrutura
 
-| Item | Valor | Onde conferir a versão |
+| Item | Valor | Versão |
 |---|---|---|
 | SGBD | PostgreSQL | pgAdmin > Query Tool: `SELECT version();` |
 | Linguagem de programação | JavaScript (Node.js) | terminal do VS Code: `node -v` |
+
+## Diagrama entidade-relacionamento
+
+Gerado pelo pgAdmin (ERD Tool) e exportado como `der.png`. Ver `01_postgresql.md`, seção pgAdmin 4.

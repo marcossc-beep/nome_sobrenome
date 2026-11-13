@@ -1,8 +1,7 @@
 # Projeto base do SAEP: sistema da barbearia
 
-Este repositório traz a documentação que usamos em aula para montar um sistema completo:
-banco de dados no PostgreSQL, API com Fastify e front-end em HTML, CSS e JavaScript.
-O exemplo de toda a documentação é uma **barbearia** (barbeiros, clientes e agendamentos).
+Documentação de consulta para o desenvolvimento de um sistema com banco de dados PostgreSQL, API em Node.js (Fastify) e front-end em HTML e JavaScript.
+Todos os exemplos usam o sistema de uma **barbearia** (barbeiros, clientes e agendamentos).
 
 ## Como abrir
 
@@ -13,51 +12,27 @@ git clone https://github.com/marcossc-beep/nome_sobrenome
 ```
 
 2. Aceite as extensões recomendadas que o VS Code oferecer (REST Client, Markdown All in One, Markdown PDF e Live Server).
-3. Os arquivos `.md` da documentação já abrem no modo de leitura. Para editar um deles, clique com o botão direito na aba e escolha **Reopen Editor With... > Text Editor**.
+3. Os arquivos `.md` da documentação abrem no modo de leitura. Para editar um deles: botão direito na aba > **Reopen Editor With... > Text Editor**.
 4. As dependências já estão na pasta `node_modules`. Para rodar a API:
 
 ```bash
 npm start
 ```
 
-## Escolha UM caminho e siga até o fim
+## Documentação
 
-As duas documentações montam o sistema inteiro, cada uma do seu jeito. Não misture as duas no mesmo `server.js`:
-as rotas têm os mesmos nomes e a API para com o erro `Method ... already declared for route`.
+Duas versões do mesmo sistema. Cada uma é completa por si; o `server.js` segue uma ou outra (as rotas têm os mesmos nomes e não podem aparecer duas vezes).
 
-### Documentação Simplificada (sem criptografia)
-
-Login com CPF e senha guardados como texto, sessão com tempo de expiração no navegador.
-
-| Ordem | Arquivo | O que tem |
+| Arquivo | `adequado` (sem criptografia, sem front-end) | `avancado` (bcrypt, JWT e front-end) |
 |---|---|---|
-| 1 | `#1_documentacao.md` | Anexo 1: requisitos funcionais e de infraestrutura |
-| 2 | `#2_SQL.md` | tabelas, INSERT, SELECT, JOIN, o `saep_db.sql` completo e o DER |
-| 3 | `#3_API.md` | todas as rotas, uma por vez, e o `server.js` completo no fim |
-| 4 | `#4_referencias.md` | testes no REST Client (`referencias.http`) |
-| 5 | `#5_FRONT.md` | todas as telas da pasta FRONT, cada arquivo completo |
-
-### Documentação Completa (com bcrypt e JWT)
-
-CPF e senha criptografados com bcrypt na API e sessão com token JWT que expira.
-
-| Ordem | Arquivo | O que tem |
-|---|---|---|
-| 0 | `#0_documentacao.md` | Anexo 1: requisitos funcionais e de infraestrutura |
-| 1 | `backend/#0_SQL.md` | banco passo a passo, o `saep_db.sql` completo e o DER |
-| 2 | `backend/#1_servidor_login_e_criptografia.md` | projeto, conexão, bcrypt, JWT, login e rotas de barbeiro |
-| 3 | `backend/#2_busca_e_JOIN.md` | busca por termo e listagens com JOIN |
-| 4 | `backend/#3_cliente_e_agendamento_API.md` | cliente, agendamento e o `server.js` completo no fim |
-| 5 | `frontend/#1_fetch_cors_login.md` | fetch, sessão, tela de login e tela principal |
-| 6 | `frontend/#2_crud_barbeiro.md` | listar, buscar, cadastrar, editar e excluir |
-| 7 | `frontend/#3_cliente_dropdown.md` | cadastro com lista de escolha (select) |
-| 8 | `frontend/#4_agendamentos.md` | agendamentos ordenados e atualizar a data |
+| `00_documentacao_de_software.md` | Anexo 1: requisitos funcionais e de infraestrutura | igual |
+| `01_postgresql.md` | tabelas, INSERT, SELECT, ordenação, JOIN, script `saep_db.sql`, DER | + CPF e senha em hash bcrypt |
+| `02_node_fastify.md` | API: login, rotas, `server.js` completo | + bcrypt, JWT e rotas protegidas |
+| `03_vscode_rest_client.md` | VS Code, testes no REST Client, PDF do Anexo 1 | + token nas requisições, Live Server |
+| `04_front_html_js.md` | | telas: login, principal, barbeiros, clientes, agendamentos |
 
 ## Documentação de software (Anexo 1) pelo VS Code
 
 O Anexo 1 está na raiz em dois formatos: o original do Word (`ANEXO 1 - Documentação de Software_Editável (1).doc`)
-e o `documentacao.md`, com os mesmos campos, para preencher direto no VS Code:
-
-1. Abra o `documentacao.md` e preencha nome, data, número da prova, requisitos funcionais e infraestrutura.
-2. Clique com o botão direito dentro do texto e escolha **Markdown PDF: Export (pdf)**.
-3. O `documentacao.pdf` aparece na mesma pasta. É esse arquivo que vai na entrega.
+e o `documentacao.md`, com os mesmos campos, para preencher direto no VS Code e exportar com
+**Markdown PDF: Export (pdf)** (botão direito dentro do texto). O `documentacao.pdf` é o arquivo da entrega.

@@ -1,2 +1,2 @@
 -- SAEP 2026 - Simulado Barbearia - saep_db.sql
--- Consulte: documentação/Documentação Simplificada/#2_SQL.md ou documentação/Documentação Completa/backend/#0_SQL.md
+-- Consulte: documentação/adequado/01_postgresql.md ou documentação/avancado/01_postgresql.md
