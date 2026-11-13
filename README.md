@@ -23,12 +23,12 @@ npm start
 
 Duas versões do mesmo sistema. Cada uma é completa por si; o `server.js` segue uma ou outra (as rotas têm os mesmos nomes e não podem aparecer duas vezes).
 
-| Arquivo | `adequado` (sem criptografia, sem front-end) | `avancado` (bcrypt, JWT e front-end) |
+| Arquivo | `Documentação backend` | `Documentação frontend` |
 |---|---|---|
 | `00_documentacao_de_software.md` | Anexo 1: requisitos funcionais e de infraestrutura | igual |
-| `01_postgresql.md` | tabelas, INSERT, SELECT, ordenação, JOIN, script `saep_db.sql`, DER | + CPF e senha em hash bcrypt |
-| `02_node_fastify.md` | API: login, rotas, `server.js` completo | + bcrypt, JWT e rotas protegidas |
-| `03_vscode_rest_client.md` | VS Code, testes no REST Client, PDF do Anexo 1 | + token nas requisições, Live Server |
+| `01_postgresql.md` | tabelas, INSERT, SELECT, filtros, busca, ordenação, datas, JOIN, DER | + CPF e senha em hash bcrypt |
+| `02_node_fastify.md` | API: estrutura do servidor, login e rotas | + bcrypt, JWT e rotas protegidas |
+| `03_vscode_rest_client.md` | atalhos do VS Code, REST Client, PDF do Anexo 1 | + token nas requisições, Live Server |
 | `04_front_html_js.md` | | telas: login, principal, barbeiros, clientes, agendamentos |
 
 ## Documentação de software (Anexo 1) pelo VS Code
