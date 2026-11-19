@@ -178,9 +178,17 @@ DELETE http://localhost:6767/barbeiros/3
 
 ### Todos os endpoints
 
-Uma requisição para cada endpoint documentado em `02_node_fastify.md`, na mesma ordem e agrupadas pelo mesmo recurso. Os ids usados (1, 2, 3) são os dos registros do `saep_db.sql`; um DELETE executado apaga o registro, então rode-o por último ou troque o id.
+Uma requisição para cada endpoint documentado em `02_node_fastify.md`, na mesma ordem e com os mesmos recursos. Cada uma é escrita e enviada separadamente, conferindo a resposta antes de passar para a próxima: assim um erro aparece no endpoint em que ele está.
+
+- Os ids usados (1, 2, 3) são os dos registros do `saep_db.sql`.
+- O DELETE apaga o registro de verdade: rode por último ou use um id criado no POST.
+- O título depois do `###` é livre; serve para achar a requisição no arquivo.
 
 #### Autenticação
+
+##### POST /login
+
+Envia o CPF e a senha de um barbeiro do `saep_db.sql`. É um POST porque leva dados no corpo; o `Content-Type` avisa a API que o corpo é JSON.
 
 ```http
 ### Login
@@ -193,15 +201,37 @@ Content-Type: application/json
 }
 ```
 
+Resposta esperada: `200` com `message` e `usuario` (`id` e `nome`). Com a senha trocada: `401`. Sem o CPF: `400`.
+
 #### Barbeiros
+
+##### GET /barbeiros
+
+Lista os barbeiros. GET não tem corpo nem `Content-Type`: só a linha do método e da URL.
 
 ```http
 ### Listar barbeiros
 GET http://localhost:6767/barbeiros
+```
 
+Resposta esperada: `200` com um array de barbeiros, ordenados pelo id. Confira se aparecem os três do `saep_db.sql`.
+
+##### GET /barbeiros?busca=
+
+A mesma rota com a query `busca`: o texto depois do `?` chega na API em `request.query.busca`. Escreva a URL anterior e acrescente `?busca=` e um pedaço de um nome cadastrado.
+
+```http
 ### Buscar barbeiros com "ana" no nome
 GET http://localhost:6767/barbeiros?busca=ana
+```
 
+Resposta esperada: `200` só com os barbeiros que têm "ana" no nome (maiúscula ou minúscula). Um termo que ninguém tem devolve `[]`.
+
+##### POST /barbeiros
+
+Cadastra um barbeiro. Cabeçalho `Content-Type`, **linha em branco** e o corpo com as chaves que a rota lê em `request.body` (`nome`, `cpf`, `senha`).
+
+```http
 ### Cadastrar barbeiro
 POST http://localhost:6767/barbeiros
 Content-Type: application/json
@@ -211,7 +241,15 @@ Content-Type: application/json
     "cpf": "777.888.999-00",
     "senha": "senha000"
 }
+```
 
+Resposta esperada: `201` com a `message`. Envie o GET de novo: o barbeiro novo aparece com o próximo id.
+
+##### PUT /barbeiros/:id
+
+Altera um barbeiro. O id vai no fim da URL (troca o `:id` da rota pelo número) e o corpo leva os dados novos.
+
+```http
 ### Editar o barbeiro 1
 PUT http://localhost:6767/barbeiros/1
 Content-Type: application/json
@@ -220,17 +258,39 @@ Content-Type: application/json
     "nome": "Carlos Silva Souza",
     "cpf": "111.222.333-44"
 }
+```
 
-### Excluir o barbeiro 3 (apaga junto os clientes e agendamentos dele)
+Resposta esperada: `200` com a `message`. Com um id que não existe (`/barbeiros/99`): `404`.
+
+##### DELETE /barbeiros/:id
+
+Exclui um barbeiro. Como o GET, não tem corpo nem `Content-Type`; o id vai na URL.
+
+```http
+### Excluir o barbeiro 3
 DELETE http://localhost:6767/barbeiros/3
 ```
 
+Resposta esperada: `200` com a `message`. Pelo `ON DELETE CASCADE`, os clientes e agendamentos do barbeiro 3 somem junto: confira com o GET de clientes e de agendamentos.
+
 #### Clientes
 
-```http
-### Listar clientes (com o nome do barbeiro)
-GET http://localhost:6767/clientes
+##### GET /clientes
 
+Lista os clientes. A rota faz um JOIN com `barbeiro`, então cada cliente vem com o nome do barbeiro dele.
+
+```http
+### Listar clientes
+GET http://localhost:6767/clientes
+```
+
+Resposta esperada: `200` com um array; cada cliente tem `barbeiro_id` e `barbeiro_nome`.
+
+##### POST /clientes
+
+Cadastra um cliente. A chave estrangeira `barbeiro_id` vai como **número**, com o id de um barbeiro que existe.
+
+```http
 ### Cadastrar cliente do barbeiro 1
 POST http://localhost:6767/clientes
 Content-Type: application/json
@@ -240,8 +300,16 @@ Content-Type: application/json
     "cpf": "888.999.000-11",
     "barbeiro_id": 1
 }
+```
 
-### Editar o cliente 1 (passa para o barbeiro 2)
+Resposta esperada: `201`. Com `"barbeiro_id": 99` (barbeiro que não existe): `400`.
+
+##### PUT /clientes/:id
+
+Altera um cliente, inclusive o barbeiro dele. O corpo leva todos os campos editáveis.
+
+```http
+### Editar o cliente 1
 PUT http://localhost:6767/clientes/1
 Content-Type: application/json
 
@@ -250,17 +318,39 @@ Content-Type: application/json
     "cpf": "444.555.666-77",
     "barbeiro_id": 2
 }
+```
 
+Resposta esperada: `200`. No GET de clientes, o `barbeiro_nome` do cliente 1 muda. Id inexistente: `404`; `barbeiro_id` inexistente: `400`.
+
+##### DELETE /clientes/:id
+
+Exclui um cliente pelo id da URL.
+
+```http
 ### Excluir o cliente 3
 DELETE http://localhost:6767/clientes/3
 ```
 
+Resposta esperada: `200`. Enviando de novo o mesmo DELETE: `404` (o cliente já não existe).
+
 #### Agendamentos
 
-```http
-### Listar agendamentos (ordenados por data)
-GET http://localhost:6767/agendamentos
+##### GET /agendamentos
 
+Lista os agendamentos com os dados do barbeiro e do cliente (JOIN de três tabelas), já ordenados pela data.
+
+```http
+### Listar agendamentos
+GET http://localhost:6767/agendamentos
+```
+
+Resposta esperada: `200` com o array na ordem das datas, não dos ids. Veja a observação de fuso horário no fim desta página.
+
+##### POST /agendamentos
+
+Cadastra um agendamento. A data vai como texto no formato `AAAA-MM-DDTHH:MM`, sem fuso; os dois ids, como números.
+
+```http
 ### Cadastrar agendamento
 POST http://localhost:6767/agendamentos
 Content-Type: application/json
@@ -270,7 +360,15 @@ Content-Type: application/json
     "barbeiro_id": 1,
     "cliente_id": 2
 }
+```
 
+Resposta esperada: `201`. No GET, o novo agendamento entra na posição da data dele. Barbeiro ou cliente inexistente: `400`.
+
+##### PUT /agendamentos/:id
+
+Muda só a data de um agendamento: o corpo leva apenas `data_hora`.
+
+```http
 ### Atualizar a data do agendamento 1
 PUT http://localhost:6767/agendamentos/1
 Content-Type: application/json
@@ -278,36 +376,20 @@ Content-Type: application/json
 {
     "data_hora": "2026-12-01T09:00"
 }
+```
 
+Resposta esperada: `200`. No GET, o agendamento 1 muda de posição. Id inexistente: `404`.
+
+##### DELETE /agendamentos/:id
+
+Exclui um agendamento. Nenhuma outra tabela aponta para ele, então só essa linha some.
+
+```http
 ### Excluir o agendamento 3
 DELETE http://localhost:6767/agendamentos/3
 ```
 
-#### Casos de erro de cada recurso
-
-```http
-### Barbeiro que não existe (esperado: 404)
-PUT http://localhost:6767/barbeiros/99
-Content-Type: application/json
-
-{
-    "nome": "Carlos Silva Souza",
-    "cpf": "111.222.333-44"
-}
-
-### Cliente com barbeiro que não existe (esperado: 400)
-POST http://localhost:6767/clientes
-Content-Type: application/json
-
-{
-    "nome": "Teste",
-    "cpf": "000.000.000-00",
-    "barbeiro_id": 99
-}
-
-### Agendamento que não existe (esperado: 404)
-DELETE http://localhost:6767/agendamentos/99
-```
+Resposta esperada: `200`; id inexistente: `404`.
 
 ### Atalhos do REST Client
 
