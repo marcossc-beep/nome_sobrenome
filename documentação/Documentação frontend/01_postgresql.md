@@ -40,6 +40,42 @@ Regras escritas junto da coluna, no `CREATE TABLE`. O banco recusa qualquer INSE
 | `REFERENCES tabela(coluna)` | chave estrangeira: o valor precisa existir na outra tabela |
 | `ON DELETE CASCADE` | ao apagar a linha referenciada, apaga também as que apontam para ela |
 | `DEFAULT valor` | valor usado quando nada é informado |
+| `UNIQUE` | o valor não pode se repetir em duas linhas (ex.: `cpf VARCHAR(255) NOT NULL UNIQUE`) |
+| `CHECK (condição)` | o valor precisa obedecer à condição (ex.: `preco NUMERIC(10,2) CHECK (preco > 0)`) |
+
+Uma coluna pode ter várias restrições, separadas por espaço: `id SERIAL PRIMARY KEY`, `barbeiro_id INT NOT NULL REFERENCES barbeiro(id) ON DELETE CASCADE`.
+
+### Forma geral do CREATE TABLE
+
+```sql
+CREATE TABLE nome_da_tabela (
+    coluna1 tipo restrições,
+    coluna2 tipo restrições,
+    ...
+    colunaN tipo restrições
+);
+```
+
+- As colunas ficam entre parênteses, separadas por vírgula; **depois da última não vai vírgula**.
+- A ordem das colunas no `CREATE TABLE` é a ordem em que elas aparecem no `SELECT *`.
+- `CREATE TABLE IF NOT EXISTS nome (...)` não dá erro quando a tabela já existe (e não altera a que existe).
+
+### O que acontece com as linhas filhas (ações da chave estrangeira)
+
+A chave estrangeira aceita uma ação para quando a linha referenciada (a "mãe") é apagada:
+
+| Ação | Ao apagar o barbeiro... |
+|---|---|
+| `ON DELETE NO ACTION` (padrão, quando nada é escrito) | o banco recusa o DELETE enquanto houver cliente ou agendamento apontando para ele |
+| `ON DELETE RESTRICT` | igual ao padrão: recusa o DELETE |
+| `ON DELETE CASCADE` | apaga junto os clientes e agendamentos dele |
+| `ON DELETE SET NULL` | mantém as linhas filhas e deixa o `barbeiro_id` vazio (a coluna não pode ser `NOT NULL`) |
+
+### Nomes de tabelas e colunas
+
+- O Postgres converte nomes sem aspas para minúsculas: `CREATE TABLE Barbeiro` cria `barbeiro`. Por isso o padrão é escrever tudo em minúsculas, com `_` separando palavras (`data_hora`, `barbeiro_id`).
+- Nome entre aspas duplas (`"Barbeiro"`) passa a exigir as aspas e a mesma caixa em todo comando. Aspas duplas são para nomes; **textos usam aspas simples**.
+- A tabela tem nome no singular (`barbeiro`): cada linha é um barbeiro.
 
 ## Banco
 
@@ -153,6 +189,23 @@ INSERT INTO agendamento (data_hora, barbeiro_id, cliente_id) VALUES
 
 Datas em ordem diferente da ordem de cadastro deixam visível o efeito do `ORDER BY`.
 
+### INSERT: formas e retorno
+
+```sql
+INSERT INTO tabela (coluna1, coluna2) VALUES (valor1, valor2);
+```
+
+- Colunas que ficam fora da lista recebem o `DEFAULT` delas (o `SERIAL` gera o próximo número; sem `DEFAULT`, a coluna fica `NULL` — e uma coluna `NOT NULL` recusa).
+- A lista de colunas pode ser omitida (`INSERT INTO barbeiro VALUES (...)`), mas aí os valores precisam vir para **todas** as colunas, na ordem do `CREATE TABLE`, inclusive o `id`. Por isso a lista é sempre escrita.
+- `RETURNING` devolve dados da linha recém-gravada, como um `SELECT`. É a forma de saber qual `id` o `SERIAL` gerou:
+
+```sql
+INSERT INTO cliente (nome, cpf, barbeiro_id) VALUES ('Lucas Ferreira', '888.999.000-11', 1)
+RETURNING id;   -- devolve uma linha com o id gerado (ex.: 4)
+```
+
+`RETURNING` também funciona no `UPDATE` e no `DELETE` (`... RETURNING *` devolve as linhas alteradas ou apagadas).
+
 ## Recriar e conferir as tabelas
 
 `DROP TABLE` apaga a tabela e os dados. Com várias tabelas no mesmo comando, o Postgres resolve a ordem das chaves estrangeiras; `IF EXISTS` evita erro quando a tabela ainda não existe. No início de um arquivo `.sql`, permite executar o arquivo mais de uma vez.
@@ -183,6 +236,29 @@ SELECT id, nome FROM barbeiro;
 SELECT nome AS barbeiro_nome FROM barbeiro;
 ```
 
+### Ordem de execução
+
+O `SELECT` é escrito numa ordem e executado em outra. Entender a ordem explica por que um apelido criado no `SELECT` vale no `ORDER BY`, mas não no `WHERE`:
+
+| Ordem | Parte | O que faz |
+|---|---|---|
+| 1 | `FROM` / `JOIN` | junta as tabelas |
+| 2 | `WHERE` | filtra as linhas |
+| 3 | `GROUP BY` | agrupa (ver seção Agregação) |
+| 4 | `SELECT` | escolhe as colunas e cria os apelidos (`AS`) |
+| 5 | `ORDER BY` | ordena (já enxerga os apelidos) |
+| 6 | `LIMIT` | corta a quantidade de linhas |
+
+### DISTINCT, LIMIT e OFFSET
+
+```sql
+SELECT DISTINCT barbeiro_id FROM cliente;                 -- cada barbeiro_id uma vez só
+SELECT * FROM agendamento ORDER BY data_hora LIMIT 2;     -- só os 2 primeiros
+SELECT * FROM agendamento ORDER BY data_hora LIMIT 2 OFFSET 2;   -- pula 2 e traz os 2 seguintes (página 2)
+```
+
+`LIMIT` sem `ORDER BY` traz linhas em ordem imprevisível: os dois andam juntos.
+
 ## Filtros (WHERE)
 
 `WHERE` define quais linhas entram no resultado. A condição é testada linha por linha.
@@ -204,6 +280,18 @@ SELECT * FROM barbeiro WHERE id = 1;
 -- agendamentos a partir de uma data
 SELECT * FROM agendamento WHERE data_hora >= '2026-11-19';
 ```
+
+## Valores vazios (NULL)
+
+`NULL` significa "sem valor". Ele não é igual a nada, nem a outro `NULL`: `WHERE coluna = NULL` nunca encontra linha. Para testar, usa-se `IS NULL` / `IS NOT NULL`.
+
+```sql
+SELECT * FROM cliente WHERE cpf IS NULL;        -- clientes sem CPF
+SELECT * FROM cliente WHERE cpf IS NOT NULL;
+SELECT nome, COALESCE(cpf, 'sem cpf') AS cpf FROM cliente;   -- COALESCE troca o NULL por um valor
+```
+
+Texto vazio (`''`) não é `NULL`: é um texto de tamanho zero, e passa pelo `NOT NULL`.
 
 ## Busca por termo (LIKE / ILIKE)
 
@@ -275,6 +363,23 @@ SELECT * FROM agendamento WHERE EXTRACT(MONTH FROM data_hora) = 11;   -- só nov
 SELECT id, TO_CHAR(data_hora, 'DD/MM/YYYY HH24:MI') AS data_formatada FROM agendamento;   -- 20/11/2026 14:00
 ```
 
+### Data atual e cálculos com datas
+
+| Expressão | Resultado |
+|---|---|
+| `NOW()` ou `CURRENT_TIMESTAMP` | data e hora de agora |
+| `CURRENT_DATE` | só a data de hoje |
+| `data_hora + INTERVAL '1 day'` | soma um dia (também `'2 hours'`, `'30 minutes'`, `'1 month'`) |
+| `data_hora::date` | só a parte da data (o `::` converte o tipo) |
+| `DATE_TRUNC('month', data_hora)` | "corta" a data no início do mês (útil para agrupar por mês) |
+
+```sql
+SELECT * FROM agendamento WHERE data_hora >= NOW();                 -- só os agendamentos futuros
+SELECT * FROM agendamento WHERE data_hora::date = '2026-11-20';     -- todos do dia 20/11, qualquer hora
+```
+
+Um texto no formato `'AAAA-MM-DD HH:MI:SS'` é convertido sozinho para `TIMESTAMP` na comparação e no INSERT. Um texto fora do formato dá `invalid input syntax for type timestamp`.
+
 ## JOIN
 
 A tabela `agendamento` guarda só números (`barbeiro_id`, `cliente_id`). Para mostrar os nomes, as tabelas são juntadas pela chave estrangeira.
@@ -285,6 +390,29 @@ Estrutura: `FROM tabela_com_fk INNER JOIN tabela_referenciada ON tabela_com_fk.c
 - Com colunas de mesmo nome em tabelas diferentes (`id`, `nome`, `cpf`), escreve-se `tabela.coluna`. Sem isso o banco responde `column reference "id" is ambiguous`.
 - Cada coluna repetida recebe um apelido com `AS`, senão uma sobrescreve a outra no resultado.
 - `WHERE` e `ORDER BY` vêm depois dos `JOIN`.
+
+### Tipos de JOIN
+
+| JOIN | Traz |
+|---|---|
+| `INNER JOIN` (ou só `JOIN`) | só as linhas que têm par nas duas tabelas |
+| `LEFT JOIN` (ou `LEFT OUTER JOIN`) | todas as linhas da tabela da esquerda (a do `FROM`); sem par, as colunas da outra vêm `NULL` |
+| `RIGHT JOIN` | todas as linhas da tabela da direita (a do `JOIN`) |
+| `FULL JOIN` | todas as linhas das duas tabelas |
+
+O `ON` é a condição que casa as linhas: quase sempre `chave_estrangeira = id`. Um `ON` errado (`cliente.id = barbeiro.id`) não dá erro, mas junta linhas que não têm relação.
+
+### Apelido de tabela
+
+Depois do nome da tabela pode vir um apelido curto, usado no lugar do nome em todo o comando:
+
+```sql
+SELECT c.nome, b.nome AS barbeiro_nome
+FROM cliente c
+INNER JOIN barbeiro b ON c.barbeiro_id = b.id;
+```
+
+O resultado é o mesmo da forma com os nomes completos.
 
 ### Duas tabelas: cliente com o nome do barbeiro
 
@@ -345,6 +473,30 @@ WHERE agendamento.barbeiro_id = 1
 ORDER BY agendamento.data_hora;
 ```
 
+## Agregação (COUNT, SUM, GROUP BY)
+
+Funções de agregação resumem várias linhas em um valor:
+
+| Função | Devolve |
+|---|---|
+| `COUNT(*)` | quantidade de linhas |
+| `COUNT(coluna)` | quantidade de linhas em que a coluna não é `NULL` |
+| `SUM(coluna)` / `AVG(coluna)` | soma / média |
+| `MIN(coluna)` / `MAX(coluna)` | menor / maior valor (também em datas: o primeiro e o último agendamento) |
+
+`GROUP BY` faz a conta separada por grupo. Toda coluna do `SELECT` que não está dentro de uma função de agregação precisa estar no `GROUP BY`.
+
+```sql
+-- quantidade de agendamentos de cada barbeiro (LEFT JOIN: inclui quem tem zero)
+SELECT barbeiro.nome, COUNT(agendamento.id) AS total
+FROM barbeiro
+LEFT JOIN agendamento ON agendamento.barbeiro_id = barbeiro.id
+GROUP BY barbeiro.id, barbeiro.nome
+ORDER BY total DESC;
+```
+
+`HAVING` filtra os grupos depois da conta (o `WHERE` filtra linhas antes dela): `... GROUP BY barbeiro.id, barbeiro.nome HAVING COUNT(agendamento.id) > 1`.
+
 ## UPDATE
 
 `UPDATE tabela SET coluna = valor WHERE condição;` Várias colunas no mesmo comando ficam separadas por vírgula. O `WHERE` escolhe as linhas alteradas: **sem `WHERE`, todas as linhas da tabela mudam**.
@@ -378,6 +530,12 @@ Com `ON DELETE CASCADE`, apagar o barbeiro 1 apaga também os clientes e os agen
 | `column reference "id" is ambiguous` | coluna com o mesmo nome em duas tabelas do JOIN; use `tabela.coluna` |
 | `INSERT has more expressions than target columns` | quantidade de valores diferente da quantidade de colunas |
 | `value too long for type character varying(n)` | o texto é maior que o tamanho da coluna |
+| `duplicate key value violates unique constraint` | valor repetido em coluna `PRIMARY KEY` ou `UNIQUE` |
+| `column "x" does not exist` | nome de coluna errado, ou texto escrito entre aspas duplas (`"Ana"`) em vez de simples (`'Ana'`) |
+| `invalid input syntax for type integer: "abc"` | texto onde se espera número (ex.: `WHERE id = 'abc'`) |
+| `invalid input syntax for type timestamp` | data fora do formato `AAAA-MM-DD HH:MI:SS` |
+| `column "x" must appear in the GROUP BY clause` | coluna no `SELECT` fora de função de agregação e fora do `GROUP BY` |
+| `update or delete on table "x" violates foreign key constraint` | DELETE de uma linha que ainda é referenciada, sem `ON DELETE CASCADE` |
 
 ## pgAdmin 4
 

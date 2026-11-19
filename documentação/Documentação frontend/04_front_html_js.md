@@ -33,6 +33,23 @@ Abertura: Live Server (`03_vscode_rest_client.md`).
 <div id="lista"></div>
 ```
 
+### Tipos de input
+
+| `type` | O que o `.value` devolve |
+|---|---|
+| `text` | o texto digitado |
+| `password` | o texto digitado (a tela mostra pontos) |
+| `number` | o número **como texto** (`'3'`); use `Number(...)` para contas |
+| `email` | o texto; o navegador confere o formato só dentro de um `<form>` |
+| `date` | `'2026-12-20'` |
+| `datetime-local` | `'2026-12-20T14:30'` (sem fuso: é o formato que a API grava) |
+
+Todo `.value` é texto. Campo vazio devolve `''` (texto vazio), não `null`.
+
+### select
+
+O `.value` do `<select>` é o `value` da `<option>` escolhida (texto). O texto que aparece na tela é outra coisa: `<option value="1">Carlos Silva</option>` mostra "Carlos Silva" e devolve `'1'`.
+
 ## DOM
 
 ```js
@@ -50,6 +67,29 @@ lista.innerHTML += `<p>${barbeiro.nome}</p>`   // acrescenta HTML
 | `prompt('pergunta', 'valor inicial')` | caixa de texto; devolve o que foi digitado |
 | `confirm('Deseja excluir?')` | `true` ou `false` |
 | `window.location.href = 'principal.html'` | muda de página |
+
+### innerHTML e textContent
+
+| Propriedade | Efeito |
+|---|---|
+| `elemento.innerHTML = '<b>Ana</b>'` | o texto é lido como HTML: aparece **Ana** em negrito |
+| `elemento.textContent = '<b>Ana</b>'` | o texto aparece exatamente como está, com os sinais `<b>` |
+
+`innerHTML` é o que permite montar a lista com botões. Para mostrar só um texto (uma mensagem, um nome), `textContent` é suficiente.
+
+### Encontrando elementos
+
+| Comando | Encontra |
+|---|---|
+| `document.getElementById('lista')` | o elemento com `id="lista"` (um só; o id não se repete na página) |
+| `document.querySelector('#lista')` | o primeiro elemento que combina com o seletor CSS (`#id`, `.classe`, `tag`) |
+| `document.querySelectorAll('button')` | todos os que combinam, numa lista |
+
+`getElementById` devolve `null` quando o id não existe na página: o erro aparece depois, como `Cannot read properties of null (reading 'value')`.
+
+### Eventos
+
+`onclick="cadastrar()"` no HTML chama a função quando o botão é clicado. A função precisa existir no `<script>` da página com o mesmo nome. Outros eventos no mesmo formato: `onchange` (valor do campo ou do select mudou), `oninput` (a cada tecla), `onsubmit` (envio de formulário).
 
 ## fetch
 
@@ -80,6 +120,73 @@ const dados = await resposta.json()   // { message: '...' }
 
 `await` só funciona dentro de função `async`. `fetch` só lança erro em falha de rede: respostas 400, 401 e 500 chegam normalmente e são conferidas pelo `status`.
 
+### Opções do fetch
+
+`fetch(url, opções)` envia uma requisição e devolve uma *promise* com a resposta.
+
+| Opção | Padrão | Uso |
+|---|---|---|
+| `method` | `'GET'` | `'POST'`, `'PUT'`, `'DELETE'` |
+| `headers` | nenhum | objeto com os cabeçalhos: `Content-Type` quando há corpo, `Authorization` nas rotas protegidas |
+| `body` | nenhum | **texto**: o objeto passa por `JSON.stringify` antes |
+
+- GET e DELETE não levam `body` nem `Content-Type`. Um `Content-Type: application/json` sem corpo faz a API responder 400 (`Body cannot be empty...`).
+- `body: barbeiro` (sem o `JSON.stringify`) envia o texto `[object Object]`, e a API recusa.
+
+### Lendo a resposta
+
+| Método | Devolve |
+|---|---|
+| `await resposta.json()` | o corpo convertido em objeto ou array |
+| `await resposta.text()` | o corpo como texto puro |
+
+O corpo só pode ser lido uma vez: chamar `.json()` duas vezes na mesma resposta dá erro (`body stream already read`). Guarde o resultado numa variável.
+
+### async e await
+
+- `async` antes de `function` permite usar `await` dentro dela. Uma função `async` sempre devolve uma *promise*.
+- `await` espera a *promise* terminar e entrega o valor. Sem `await`, `fetch(...)` devolve a *promise* e não a resposta: `resposta.json is not a function`.
+
+### Falha de rede (try/catch)
+
+Se a API estiver desligada, o `fetch` lança um erro (`Failed to fetch`) e o resto da função não executa. O `try/catch` permite avisar o usuário:
+
+```js
+async function visualizar() {
+    try {
+        const resposta = await fetch('http://localhost:6767/barbeiros', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        const barbeiros = await resposta.json()
+        // ... monta a lista
+    } catch (erro) {
+        alert('não foi possível falar com a API: ' + erro.message)
+    }
+}
+```
+
+### Conferindo o status
+
+O `fetch` não lança erro em 400, 401, 404 ou 500: a resposta chega normalmente. Quem decide é o código:
+
+```js
+if (resposta.ok) {                    // 200 a 299
+    alert(dados.message)
+} else if (resposta.status === 401) { // token ausente ou vencido
+    sair()
+} else {
+    alert(dados.message)              // 400, 404: a mensagem da API explica
+}
+```
+
+### Texto da busca na URL
+
+Um termo com espaço, acento ou `&` precisa ser codificado para ir na URL. `encodeURIComponent` faz isso (`'ana souza'` vira `'ana%20souza'`), e a API recebe o texto original em `request.query.busca`:
+
+```js
+const resposta = await fetch(`http://localhost:6767/barbeiros?busca=${encodeURIComponent(busca)}`, { ... })
+```
+
 ## localStorage
 
 Guarda texto no navegador, mesmo depois de recarregar a página.
@@ -91,6 +198,10 @@ Guarda texto no navegador, mesmo depois de recarregar a página.
 | `localStorage.removeItem('chave')` | apaga |
 | `JSON.stringify(objeto)` / `JSON.parse(texto)` | objeto → texto / texto → objeto |
 | `Date.now()` | horário atual em milissegundos |
+
+- Guarda só **texto**: um número volta como texto (`'1795000000000'`, por isso o `Number(...)` no `expira`) e um objeto precisa de `JSON.stringify` para entrar e de `JSON.parse` para sair.
+- É separado por **origem** (protocolo + endereço + porta). `http://127.0.0.1:5500` e `http://localhost:5500` são origens diferentes: o que foi guardado em uma não aparece na outra. Abra as páginas sempre pelo mesmo endereço do Live Server.
+- `sessionStorage` tem os mesmos comandos, mas apaga tudo ao fechar a aba.
 
 ## Sessão
 
@@ -113,6 +224,8 @@ function sair() {
     window.location.href = 'index.html'        // volta para o login
 }
 ```
+
+A conferência no front é para a **tela**: evita mostrar uma página que não vai conseguir carregar nada. Quem garante a segurança é a API, com o `jwtVerify` em cada rota: mesmo que alguém pule a conferência do front, a API responde 401 sem um token válido.
 
 ## index.html (login)
 
@@ -516,3 +629,7 @@ function sair() {
 | lista vazia e 401 em Network | token ausente no `headers` ou token vencido |
 | volta sempre para o login | o token expirou, ou `expira` não foi salvo no login |
 | acentos trocados por símbolos | falta `<meta charset="UTF-8">` |
+| `Cannot read properties of null (reading 'value')` | o `id` do `getElementById` não existe no HTML (nome diferente) |
+| `x is not defined` ao clicar | a função do `onclick` não existe ou tem outro nome |
+| `resposta.json is not a function` | faltou `await` antes do `fetch` |
+| `[object Object]` chegando na API | faltou `JSON.stringify` no `body` |
